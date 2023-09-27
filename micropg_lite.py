@@ -42,7 +42,7 @@
 # self.tz_name = 'Etc/UTC'
 # self.server_version = '150200'
 
-### Version 1.0.0
+### Version 2.0.0
 
 from hashlib import sha256
 from binascii import a2b_base64, b2a_base64
