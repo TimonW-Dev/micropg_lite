@@ -97,7 +97,6 @@ class NotSupportedError(MicropgError):
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
-        self.description = []
         self._rows = []
         self._rowcount = 0
         self.arraysize = 1
@@ -105,7 +104,6 @@ class Cursor(object):
     def execute(self, query, args=()):
         if not self.connection or not self.connection.is_connect():
             raise OtherMicropgError(u"08003:Lost connection")
-        self.description = []
         self._rows.clear()
         self.args = args
         if args:
