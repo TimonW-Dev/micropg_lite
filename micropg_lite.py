@@ -40,7 +40,6 @@
 # client_nonce = 'fGc5rZ077tqyQ3ez+HTVe+xn'
 
 # self.tz_name = 'Etc/UTC'
-# self.server_version = '150200'
 
 ### Version 2.0.0
 
@@ -68,8 +67,6 @@ def _decode_column(data, oid, encoding):
     data = data.decode(encoding)
     if oid == 16:
         return data == 't'
-    elif oid in (18, 25, 1042, 1043, 19, 3802, 142, 705, 194, 3614, 869, 21, 23, 20, 26, 700, 701):
-        return data
     return data
 
 def _bytes_to_bint(b):
@@ -140,7 +137,6 @@ class Connection(object):
         self.port = port
         self.timeout = timeout
         self.encoding = 'UTF8'
-        self.server_version = '150200' # !IMPORTANT: CAN CHANGE ON NEW VERSION
         self._ready_for_query = b'I'
         self.encoders = {}
         self.tz_name = 'Etc/UTC' # !IMPORTANT: CAN VARY
@@ -180,7 +176,7 @@ class Connection(object):
                 auth_method = _bytes_to_bint(data[:4])
                 if auth_method == 10:
                     assert data[4:-2].decode('utf-8') == 'SCRAM-SHA-256'
-                    client_nonce = 'fGc5rZ077tqyQ3ez+HTVe+xn' # !IMPORTANT! generate one manually for each device.
+                    client_nonce = 'VOrjvkgZv+/c4whJFjDRm/PU' # !IMPORTANT! generate one manually for each device.
                     first_message = 'n,,n=,r=' + client_nonce
                     self._send_data(b'p', b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(first_message)) + first_message.encode('utf-8'))
                     code = ord(self._read(1))
