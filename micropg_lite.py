@@ -85,10 +85,6 @@ class MicropgError(Error):
 class OtherMicropgError(MicropgError):
     pass
 
-class NotSupportedError(MicropgError):
-    def __init__(self):
-        super().__init__('NotSupportedError')
-
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
@@ -128,11 +124,9 @@ class Connection(object):
         self.host = host
         self.port = port
         self.timeout = timeout
-        self.encoding = 'UTF8'
         self._ready_for_query = b'I'
         self.encoders = {}
         self.tz_name = 'Etc/UTC' # !IMPORTANT: CAN VARY
-        self.tzinfo = None
         self._open()
     def _send_data(self, message, data):
         length = len(data) + 4
@@ -234,7 +228,7 @@ class Connection(object):
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
-                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding)
+                    row[i] = _decode_column(row[i], obj.description[i][1], 'UTF8')
                 obj._rows.append(tuple(row))
             elif code == 84:
                 if not obj:
@@ -247,7 +241,7 @@ class Connection(object):
                     name = data[n:data.find(b'\x00', n)]
                     n += len(name) + 1
                     try:
-                        name = name.decode(self.encoding)
+                        name = name.decode('UTF8')
                     except UnicodeDecodeError:
                         pass
                     type_code = _bytes_to_bint(data[n+6:n+10])
@@ -316,7 +310,7 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
     def _execute(self, query, obj): 
-        self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
+        self._send_message(b'Q', query.encode('UTF8') + b'\x00')
         self.process_messages(obj)
     def execute(self, query, obj=None):
         self._execute(query, obj)
