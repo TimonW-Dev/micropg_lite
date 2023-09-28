@@ -95,9 +95,8 @@ class Cursor(object):
         self._rows.clear()
         self.args = args
         if args:
-            escaped_args = tuple(self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args)
             query = query.replace(u'%', u'%%').replace(u'%%s', u'%s')
-            query = query % escaped_args
+            query = query % tuple(self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args)
             query = query.replace(u'%%', u'%')
         self.connection.execute(query, self)
         
@@ -124,7 +123,6 @@ class Connection(object):
         self.host = host
         self.port = port
         self.timeout = timeout
-        self._ready_for_query = b'I'
         self.encoders = {}
         self._open()
     def _send_data(self, message, data):
@@ -168,7 +166,7 @@ class Connection(object):
                     assert code == 82
                     ln = _bytes_to_bint(self._read(4)) - 4
                     data = self._read(ln)
-                    assert _bytes_to_bint(data[:4]) == 11      # SCRAM first
+                    assert _bytes_to_bint(data[:4]) == 11
                     server = {
                         kv[0]: kv[2:]
                         for kv in data[4:].decode('utf-8').split(',')
