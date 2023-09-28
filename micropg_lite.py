@@ -32,16 +32,10 @@
 # https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.h
 # -----------------------------------------------------------------------------
 
-### !!! To DOs !!!
-### Run the getServerData.py script on your local OS. Than replace the information if the data does not mach from the todo list beneath
-### The client_nonce has to get replaced on every device
-### press CTRL+F on the comment line and than replace the real code with your information from the getServerData.py script
-# To Do list:
-# client_nonce = 'fGc5rZ077tqyQ3ez+HTVe+xn'
-
 ### Version 2.0.0
 
 from hashlib import sha256
+from random import getrandbits
 import binascii
 import socket
 
@@ -158,7 +152,7 @@ class Connection(object):
                 auth_method = _bytes_to_bint(data[:4])
                 if auth_method == 10:
                     assert data[4:-2].decode('utf-8') == 'SCRAM-SHA-256'
-                    client_nonce = 'VOrjvkgZv+/c4whJFjDRm/PU'  # !IMPORTANT! generate one manually for each device.
+                    client_nonce = str(getrandbits(32))
                     first_message = 'n,,n=,r=' + client_nonce
                     self._send_data(b'p',
                                     b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(first_message)) + first_message.encode(
