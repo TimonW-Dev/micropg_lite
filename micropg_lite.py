@@ -81,19 +81,6 @@ def _bint_to_bytes(val):
     return val.to_bytes(4, 'big')
 
 
-class Error(Exception):
-    def __init__(self, *args):
-        super().__init__(b'Error', '')
-
-
-class MicropgError(Error):
-    pass
-
-
-class OtherMicropgError(MicropgError):
-    pass
-
-
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
@@ -103,7 +90,7 @@ class Cursor(object):
 
     def execute(self, query, args=()):
         if not self.connection or not self.connection.is_connect():
-            raise OtherMicropgError(u"08003:Lost connection")
+            raise Exception(u"08003:Lost connection")
         self._rows.clear()
         self.args = args
         if args:
@@ -158,7 +145,7 @@ class Connection(object):
         while True:
             try:
                 code = ord(self._read(1))
-            except OtherMicropgError:
+            except Exception:
                 break
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
@@ -232,7 +219,7 @@ class Connection(object):
                     data = self._read(ln)
                     assert _bytes_to_bint(data[:4]) == 0
                 else:
-                    errobj = MicropgError("Authentication method %d not supported." % (auth_method,))
+                    errobj = Exception("Authentication method %d not supported." % (auth_method,))
             elif code == 68:
                 if not obj:
                     continue
@@ -292,7 +279,7 @@ class Connection(object):
 
     def _read(self, ln):
         if not self.sock:
-            raise OtherMicropgError(u"08003:Lost connection")
+            raise Exception(u"08003:Lost connection")
         r = b''
         while len(r) < ln:
             if hasattr(self.sock, "read"):
@@ -300,13 +287,13 @@ class Connection(object):
             else:
                 b = self.sock.recv(ln - len(r))
             if not b:
-                raise OtherMicropgError(u"08003:Can't recv packets")
+                raise Exception(u"08003:Can't recv packets")
             r += b
         return r
 
     def _write(self, b):
         if not self.sock:
-            raise OtherMicropgError(u"08003:Lost connection")
+            raise Exception(u"08003:Lost connection")
         n = 0
         while (n < len(b)):
             if hasattr(self.sock, "write"):
