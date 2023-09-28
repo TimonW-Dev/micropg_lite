@@ -39,12 +39,10 @@
 # To Do list:
 # client_nonce = 'fGc5rZ077tqyQ3ez+HTVe+xn'
 
-# self.tz_name = 'Etc/UTC'
-
 ### Version 2.0.0
 
 from hashlib import sha256
-from binascii import a2b_base64, b2a_base64
+import binascii
 import socket
 
 
@@ -86,7 +84,6 @@ class Cursor(object):
         self.connection = connection
         self._rows = []
         self._rowcount = 0
-        self.query = None
 
     def execute(self, query, args=()):
         if not self.connection or not self.connection.is_connect():
@@ -94,30 +91,26 @@ class Cursor(object):
         self._rows.clear()
         self.args = args
         if args:
-            escaped_args = tuple(self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args)
             query = query.replace(u'%', u'%%').replace(u'%%s', u'%s')
-            query = query % escaped_args
+            query = query % tuple(self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args)
             query = query.replace(u'%%', u'%')
-        self.query = query
         self.connection.execute(query, self)
 
     def fetchall(self):
         r = list(self._rows)
         self._rows.clear()
         return r
-
+    
     def close(self):
         self.connection = None
 
-    @property
     def rowcount(self):
         return self._rowcount
 
-    @property
     def closed(self):
         return self.connection is None or not self.connection.is_connect()
-
-
+      
+      
 class Connection(object):
     def __init__(self, user, password, database, host, port, timeout):
         self.user = user
@@ -126,9 +119,7 @@ class Connection(object):
         self.host = host
         self.port = port
         self.timeout = timeout
-        self._ready_for_query = b'I'
         self.encoders = {}
-        self.tz_name = 'Etc/UTC'  # !IMPORTANT: CAN VARY
         self._open()
 
     def _send_data(self, message, data):
@@ -176,7 +167,7 @@ class Connection(object):
                     assert code == 82
                     ln = _bytes_to_bint(self._read(4)) - 4
                     data = self._read(ln)
-                    assert _bytes_to_bint(data[:4]) == 11  # SCRAM first
+                    assert _bytes_to_bint(data[:4]) == 11
                     server = {
                         kv[0]: kv[2:]
                         for kv in data[4:].decode('utf-8').split(',')
@@ -188,7 +179,7 @@ class Connection(object):
                     # send client final message
                     salted_pass = pbkdf2_hmac_sha256(
                         self.password.encode('utf-8'),
-                        a2b_base64(server['s']),
+                        binascii.a2b_base64(server['s']),
                         int(server['i']),
                     )
                     client_key = hmac_sha256_digest(salted_pass, b"Client Key")
@@ -204,7 +195,7 @@ class Connection(object):
                         sha256(client_key).digest(),
                         auth_msg.encode('utf-8'),
                     )
-                    proof = b2a_base64(
+                    proof = binascii.b2a_base64(
                         b"".join([bytes([x ^ y]) for x, y in zip(client_key, client_sig)])
                     ).rstrip(b'\n')
                     self._send_data(b'p', (client_final_message_without_proof + ",p=").encode('utf-8') + proof)
