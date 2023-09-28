@@ -45,11 +45,13 @@ from hashlib import sha256
 import binascii
 import socket
 
+
 def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - (len(key) % 64))
     ik = bytes([0x36 ^ b for b in pad_key])
     ok = bytes([0x5c ^ b for b in pad_key])
     return sha256(ok + sha256(ik + msg).digest()).digest()
+
 
 def pbkdf2_hmac_sha256(password_bytes, salt, iterations):
     _u1 = hmac_sha256_digest(password_bytes, salt + b'\x00\x00\x00\x01')
@@ -59,6 +61,7 @@ def pbkdf2_hmac_sha256(password_bytes, salt, iterations):
         _ui ^= int.from_bytes(_u1, 'big')
     return _ui.to_bytes(32, 'big')
 
+
 def _decode_column(data, oid, encoding):
     if data is None:
         return data
@@ -67,31 +70,24 @@ def _decode_column(data, oid, encoding):
         return data == 't'
     return data
 
+
 def _bytes_to_bint(b):
     return int.from_bytes(b, 'big')
+
 
 def _bint_to_bytes(val):
     return val.to_bytes(4, 'big')
 
-class Error(Exception):
-    def __init__(self, *args):
-        super().__init__(b'Error', '')
-
-class MicropgError(Error):
-    pass
-
-class OtherMicropgError(MicropgError):
-    pass
 
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
         self._rows = []
         self._rowcount = 0
-        
+
     def execute(self, query, args=()):
         if not self.connection or not self.connection.is_connect():
-            raise OtherMicropgError(u"08003:Lost connection")
+            raise Exception(u"08003:Lost connection")
         self._rows.clear()
         self.args = args
         if args:
@@ -99,7 +95,7 @@ class Cursor(object):
             query = query % tuple(self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args)
             query = query.replace(u'%%', u'%')
         self.connection.execute(query, self)
-        
+
     def fetchall(self):
         r = list(self._rows)
         self._rows.clear()
@@ -113,8 +109,8 @@ class Cursor(object):
 
     def closed(self):
         return self.connection is None or not self.connection.is_connect()
-    
-    
+      
+      
 class Connection(object):
     def __init__(self, user, password, database, host, port, timeout):
         self.user = user
@@ -125,19 +121,22 @@ class Connection(object):
         self.timeout = timeout
         self.encoders = {}
         self._open()
+
     def _send_data(self, message, data):
         length = len(data) + 4
         self._write(message + _bint_to_bytes(length) + data)
+
     def _send_message(self, message, data):
         length = len(data) + 4
         terminator = b'H\x00\x00\x00\x04'
         self._write(message + _bint_to_bytes(length) + data + terminator)
+
     def _process_messages(self, obj):
         errobj = None
         while True:
             try:
                 code = ord(self._read(1))
-            except OtherMicropgError:
+            except Exception:
                 break
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
@@ -159,9 +158,11 @@ class Connection(object):
                 auth_method = _bytes_to_bint(data[:4])
                 if auth_method == 10:
                     assert data[4:-2].decode('utf-8') == 'SCRAM-SHA-256'
-                    client_nonce = 'VOrjvkgZv+/c4whJFjDRm/PU' # !IMPORTANT! generate one manually for each device.
+                    client_nonce = 'VOrjvkgZv+/c4whJFjDRm/PU'  # !IMPORTANT! generate one manually for each device.
                     first_message = 'n,,n=,r=' + client_nonce
-                    self._send_data(b'p', b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(first_message)) + first_message.encode('utf-8'))
+                    self._send_data(b'p',
+                                    b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(first_message)) + first_message.encode(
+                                        'utf-8'))
                     code = ord(self._read(1))
                     assert code == 82
                     ln = _bytes_to_bint(self._read(4)) - 4
@@ -209,20 +210,20 @@ class Connection(object):
                     data = self._read(ln)
                     assert _bytes_to_bint(data[:4]) == 0
                 else:
-                    errobj = MicropgError("Authentication method %d not supported." % (auth_method,))
+                    errobj = Exception("Authentication method %d not supported." % (auth_method,))
             elif code == 68:
                 if not obj:
                     continue
                 n = 2
                 row = []
                 while n < len(data):
-                    if data[n:n+4] == b'\xff\xff\xff\xff':
+                    if data[n:n + 4] == b'\xff\xff\xff\xff':
                         row.append(None)
                         n += 4
                     else:
-                        ln = _bytes_to_bint(data[n:n+4])
+                        ln = _bytes_to_bint(data[n:n + 4])
                         n += 4
-                        row.append(data[n:n+ln])
+                        row.append(data[n:n + ln])
                         n += ln
                 for i in range(len(row)):
                     row[i] = _decode_column(row[i], obj.description[i][1], 'UTF8')
@@ -241,17 +242,17 @@ class Connection(object):
                         name = name.decode('UTF8')
                     except UnicodeDecodeError:
                         pass
-                    type_code = _bytes_to_bint(data[n+6:n+10])
+                    type_code = _bytes_to_bint(data[n + 6:n + 10])
                     if type_code == 1043:
-                        size = _bytes_to_bint(data[n+12:n+16]) - 4
+                        size = _bytes_to_bint(data[n + 12:n + 16]) - 4
                         precision = -1
                         scale = -1
                     elif type_code == 1700:
-                        size = _bytes_to_bint(data[n+10:n+12])
-                        precision = _bytes_to_bint(data[n+12:n+14])
-                        scale = precision - _bytes_to_bint(data[n+14:n+16])
+                        size = _bytes_to_bint(data[n + 10:n + 12])
+                        precision = _bytes_to_bint(data[n + 12:n + 14])
+                        scale = precision - _bytes_to_bint(data[n + 14:n + 16])
                     else:
-                        size = _bytes_to_bint(data[n+10:n+12])
+                        size = _bytes_to_bint(data[n + 10:n + 12])
                         precision = -1
                         scale = -1
                     field = (name, type_code, None, size, precision, scale, None)
@@ -261,33 +262,37 @@ class Connection(object):
             else:
                 pass
         return errobj
+
     def process_messages(self, obj):
         err = self._process_messages(obj)
         if err:
             raise err
+
     def _read(self, ln):
         if not self.sock:
-            raise OtherMicropgError(u"08003:Lost connection")
+            raise Exception(u"08003:Lost connection")
         r = b''
         while len(r) < ln:
             if hasattr(self.sock, "read"):
-                b = self.sock.read(ln-len(r))
+                b = self.sock.read(ln - len(r))
             else:
-                b = self.sock.recv(ln-len(r))
+                b = self.sock.recv(ln - len(r))
             if not b:
-                raise OtherMicropgError(u"08003:Can't recv packets")
+                raise Exception(u"08003:Can't recv packets")
             r += b
         return r
+
     def _write(self, b):
         if not self.sock:
-            raise OtherMicropgError(u"08003:Lost connection")
+            raise Exception(u"08003:Lost connection")
         n = 0
         while (n < len(b)):
             if hasattr(self.sock, "write"):
                 n += self.sock.write(b[n:])
             else:
                 n += self.sock.send(b[n:])
-    def _open(self): 
+
+    def _open(self):
         self.sock = socket.socket()
         self.sock.connect(socket.getaddrinfo(self.host, self.port)[0][-1])
         if self.timeout is not None:
@@ -300,27 +305,35 @@ class Connection(object):
         v += b'\x00'
         self._write(_bint_to_bytes(len(v) + 4) + v)
         self.process_messages(None)
+
     def escape_parameter(self, v):
         return "'" + v.replace("'", "''") + "'"
-    def is_connect(self): 
+
+    def is_connect(self):
         return bool(self.sock)
+
     def cursor(self):
         return Cursor(self)
-    def _execute(self, query, obj): 
+
+    def _execute(self, query, obj):
         self._send_message(b'Q', query.encode('UTF8') + b'\x00')
         self.process_messages(obj)
+
     def execute(self, query, obj=None):
         self._execute(query, obj)
+
     def commit(self):
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
+
     def close(self):
         if self.sock:
             # send Terminate
             self._write(b'X\x00\x00\x00\x04')
             self.sock.close()
             self.sock = None
+
 
 def connect(host, user, password='', database=None, port=5432, timeout=None):
     return Connection(user, password, database, host, port, timeout)
