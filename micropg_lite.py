@@ -77,12 +77,7 @@ def _bint_to_bytes(val):
 
 class Error(Exception):
     def __init__(self, *args):
-        if args:
-            self.message = args[0]
-        else:
-            self.message = b'Database Error'
-        self.code = args[1] if len(args) > 1 else ''
-        super().__init__(self.message, self.code)
+        super().__init__(b'Error', '')
 
 class MicropgError(Error):
     pass
@@ -99,7 +94,6 @@ class Cursor(object):
         self.connection = connection
         self._rows = []
         self._rowcount = 0
-        self.arraysize = 1
         self.query = None
     def execute(self, query, args=()):
         if not self.connection or not self.connection.is_connect():
@@ -326,7 +320,7 @@ class Connection(object):
         self.process_messages(obj)
     def execute(self, query, obj=None):
         self._execute(query, obj)
-    def commit(self): 
+    def commit(self):
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
@@ -337,5 +331,5 @@ class Connection(object):
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password='', database=None, port=None, timeout=None):
-    return Connection(user, password, database, host, port if port else 5432, timeout)
+def connect(host, user, password='', database=None, port=5432, timeout=None):
+    return Connection(user, password, database, host, port, timeout)
