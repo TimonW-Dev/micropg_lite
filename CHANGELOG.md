@@ -15,7 +15,7 @@ micropg_lite-V2.0.0 uses way less RAM and enables the users to use more of their
 - Removed specific errormessages for more efficency
 - `LICENSE` file updated (own MIT-Lincense added)
 - `README.md` changes
-- Removed the `getServerData.py`, is not needed anymore
+- Removed the `getServerData.py` (is no longer needed)
     - Removed "self.tz_name" variable (was unused)
     - Removed "self.server_version" variable (it didn't have any function)
     - Added random generation for "client_nonce"
