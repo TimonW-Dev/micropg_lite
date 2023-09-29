@@ -25,3 +25,7 @@ micropg_lite-V2.0.0 uses way less RAM and enables the users to use more of their
 - micropg_lite is now ready to make a pypi package
 
 Thanks to [Betafloof](https://github.com/BetaFloof) for the support ([Pull request](https://github.com/TimonW-Dev/micropg_lite/pull/1))
+
+### micropg_lite-V2.1.0 (29.9.2023)
+- README.md updated
+- Made everything ready for the pypi.org package

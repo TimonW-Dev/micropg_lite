@@ -1,28 +1,25 @@
-# micropg_lite (PostgreSQL driver for ESP8266)
+# micropg_lite (The worlds lightest PostgreSQL driver for micropython)
 
-A MicroPython PostgreSQL database driver made for microchips specifically for ESP8266 and other microchips that are low on RAM.
+A MicroPython PostgreSQL database driver made for microcontrollers (specifically for ESP8266) that are low on RAM.
 
-Try the [micropg](https://github.com/nakagami/micropg) by [
-nakagami](https://github.com/nakagami) library first, if you get a memory error when running the micropython script, this micropg_lite library can help.
+## Difference between [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) and [micropg](https://github.com/nakagami/micropg)
 
-## Difference between micropg_lite and [micropg](https://github.com/nakagami/micropg)
+[micropg_lite](https://github.com/TimonW-Dev/micropg_lite) is a lightweight version based on [micropg](https://github.com/nakagami/micropg) by [
+nakagami](https://github.com/nakagami). If you have RAM/memory issues with [micropg](https://github.com/nakagami/micropg) than this library might solve this issue.
 
-micropg_lite is a lightweight version based on [micropg](https://github.com/nakagami/micropg) by [
-nakagami](https://github.com/nakagami). The only goal of micropg_lite is to select, insert, update and delte data from PostgreSQL databases using as little ram as possible, so that even microchips with little ram (ESP8266 for example) can access a PostgreSQL database.
+The [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) library has some limitations in functionality due to the lightweight.
 
-The disadvantage of micropg_lite is that it cannot execute "CREATE DATABASE" or "DROP DATABASE" queries. The SQL queries no longer have escape parameters that the script adds, as they use too much performance. This is especially important to know when are writing the SQL queries.
-
-**For more informatino see** [micropg_lite-sql-handling-and-restrictions](#micropg_lite-sql-handling-and-restrictions)
+**For more information, see** [micropg_lite-sql-handling-and-restrictions](#micropg_lite-sql-handling-and-restrictions)
 
 ## Installation
 
 1. Download the `micropg_lite.py` file from this repository to your local computer.
 
-2. Copy the micropg_lite file to the "/lib" folder on the microcontroller using the Thonny IDE or another program. If there is no "lib" folder in the root directory, you have to create it.
+2. Copy the `micropg_lite.py` file to the "/lib" folder on the microcontroller using the Thonny IDE or another program. If there is no "lib" folder in the root directory, you have to create it.
 
     **Hint** for the Thony IDE:
     
-    Open in the top bar the "View" menu and make sure that the entry "Files" has a "✓", if not then click on "Files". Now you can directly download and upload files from your computer to the microchip. You also can create folders on the microchip.
+    Open in the top bar the "View" menu and make sure that the entry "Files" has a "✓", if not then click on "Files". Now you can directly download and upload files from your computer to the microcontroller. You also can create folders on the microcontroller.
 
 3. Now you should be able to import the library to your microcontroller in a MicroPython file.
 
@@ -32,7 +29,7 @@ import micropg_lite
 
 If there are problems or questions, open an issue on this github repository.
 
-## microchip file tree
+## microcontroller file tree
 ````
 /
 ├─ example.py
@@ -41,7 +38,7 @@ If there are problems or questions, open an issue on this github repository.
 ````
 
 ## Examples
-You need to establish a network connection before executing micropg_lite code. 
+You need to establish a network connection before executing micropg_lite code. The [SELECT example](#select-example-with-wifi-connection) inclueds the wifi template. All other examples do not include the wifi template.
 
 ### examples/ folder
 The examples/ folder includes the database sql script which was used to create the database and the used data in all those examples. The examples folder also includes the full scripts used in this readme including the wifi connection template.
@@ -121,11 +118,11 @@ conn.close()
 ````
 
 ## micropg_lite sql handling and restrictions
-- You have to put IDs into ' '. For example, see the IDs in the `insert example`
-- Escape parameters are not always working. You may have to change your queries. For example, take a look at the sql query used in the `update example`
-- You can only commit. Rollback is in `micropg_lite` not supported
+- You have to put IDs into ' '. For example, see the IDs in the `
+[insert example](#insert-example)
+- Escape parameters are not always working. You may have to change your queries. For example, take a look at the sql query used in the [update example](#update-example)
+- You can only commit. Rollback is in [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) not supported
 - You can only execute INSERT, SELECT, UPDATE and DELETE statements
 - You cannot execute "CREATE DATABASE" or "DROP DATABASE" queries
-- Supported Authentication METHOD is only 'trust' and 'scram-sha-256'.
 - Not support for array data types.
 - Not support for prepared statements.
