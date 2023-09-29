@@ -5,7 +5,7 @@ with open("pypi-README.md", "r") as fh:
 
 setup(
     name="micropg_lite", 
-    version="2.0.0",
+    version="2.1.0",
     author="TimonW-Dev",
     author_email="timon-github@outlook.com",
     description="A lightweight micropython PostgreSQL driver made for ESP8266 and other microchips with less ram",
