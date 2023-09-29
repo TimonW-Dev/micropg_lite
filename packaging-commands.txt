@@ -1,0 +1,13 @@
+cd [local repo path]
+
+# Install packaging tools
+pip install setuptools wheel
+
+# Crate package
+python setup.py sdist bdist_wheel
+
+# Upload to pypi.org
+twine upload dist/*
+- Api Token:
+    Username: __token__
+    Password: token from pipy.org
