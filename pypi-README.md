@@ -19,7 +19,7 @@ The [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) library has some 
 
     **Hint** for the Thony IDE:
     
-    Open in the top bar the "View" menu and make sure that the entry "Files" has a "✓", if not then click on "Files". Now you can directly download and upload files from your computer to the microcontroller. You also can create folders on the microcontroller.
+    Open in the top bar the "View" menu and make sure that the entry "Files" has a "+", if not then click on "Files". Now you can directly download and upload files from your computer to the microcontroller. You also can create folders on the microcontroller.
 
 3. Now you should be able to import the library to your microcontroller in a MicroPython file.
 
