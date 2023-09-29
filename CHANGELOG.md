@@ -22,5 +22,6 @@ micropg_lite-V2.0.0 uses way less RAM and enables the users to use more of their
 - `memory-test.py` script added for testing in the examples/ directory
 - `docker-containers-setup.sh` script added in the examples/ directory
 - Code formatting
+- micropg_lite is now ready to make a pypi package
 
 Thanks to [Betafloof](https://github.com/BetaFloof) for the support ([Pull request](https://github.com/TimonW-Dev/micropg_lite/pull/1))

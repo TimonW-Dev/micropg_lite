@@ -1,7 +1,7 @@
 import network   # Handles the wifi connection
 import micropg_lite
 
-### To Do: Fill in your wifi connection data
+### To Do: Fill in your wifi connection data and change the server data
 ssid = 'wifissid' # replace the string with your wifi ssid
 password = 'secret' # replase tge string with your wifi password
 

@@ -3,33 +3,34 @@
 A MicroPython PostgreSQL database driver made for microchips specifically for ESP8266 and other microchips that are low on RAM.
 
 Try the [micropg](https://github.com/nakagami/micropg) by [
-nakagami](https://github.com/nakagami) library first, if you get memory error a when running the micropython script, this micropg_lite library can help.
+nakagami](https://github.com/nakagami) library first, if you get a memory error when running the micropython script, this micropg_lite library can help.
 
 ## Difference between micropg_lite and [micropg](https://github.com/nakagami/micropg)
 
 micropg_lite is a lightweight version based on [micropg](https://github.com/nakagami/micropg) by [
-nakagami](https://github.com/nakagami). The only goal of micropg_lite is to read and write data from PostgreSQL databases using as little ram as possible, so that even microchips with little ram can access a PostgreSQL database.
+nakagami](https://github.com/nakagami). The only goal of micropg_lite is to select, insert, update and delte data from PostgreSQL databases using as little ram as possible, so that even microchips with little ram (ESP8266 for example) can access a PostgreSQL database.
 
-The disadvantage of micropg_lite is that it cannot execute "CREATE DATABASE" or "DROP DATABASE" queries. The SQL queries no longer have escape parameters that the script adds, as they use too much performance. This is especially important to know when writing SQL queries. Another disadvantage is that database information from the server, such as the version or time format, must be set statically. But all this is explained in the "Installation".
+The disadvantage of micropg_lite is that it cannot execute "CREATE DATABASE" or "DROP DATABASE" queries. The SQL queries no longer have escape parameters that the script adds, as they use too much performance. This is especially important to know when are writing the SQL queries.
+
+**For more informatino see** [micropg_lite-sql-handling-and-restrictions](#micropg_lite-sql-handling-and-restrictions)
 
 ## Installation
 
-1. Download the `micropg_lite.py` and the `getServerData.py` file to the local computer.
-2. Run the getServerData.py file on your local machine. Enter the server information. The getServerData.py file will then provide you with data that you should cache.
+1. Download the `micropg_lite.py` file from this repository to your local computer.
 
-- NOTE: The getServerData.py script is a slightly modified version of the [micropg](https://github.com/nakagami/micropg) library. This fetches all dynamic data from the PostgreSQL server which must be set statically in the micropg_lite.py file. This is done automatically with the [micropg](https://github.com/nakagami/micropg) library, but is set statically in the micropg_lite library to save performance.
+2. Copy the micropg_lite file to the "/lib" folder on the microcontroller using the Thonny IDE or another program. If there is no "lib" folder in the root directory, you have to create it.
 
-3. At the top of the micropg_lite.py file is a to-do list. Now you have to work through this todo list. Highlight the selected commented line and press CRTL+F, then replace the value assigned to the variable with the value given to you by the getServerData.py file. Then save the script.
+    **Hint** for the Thony IDE:
+    
+    Open in the top bar the "View" menu and make sure that the entry "Files" has a "✓", if not then click on "Files". Now you can directly download and upload files from your computer to the microchip. You also can create folders on the microchip.
 
-4. Copy the customized micropg_lite file to the "/lib" folder on the microcontroller using the Thonny IDE or another program. If there is no "lib" folder in the root directory, you have to create it.
-
-5. Now you should be able to import the library to your microcontroller in a MicroPython file.
+3. Now you should be able to import the library to your microcontroller in a MicroPython file.
 
 ````python
 import micropg_lite
 ````
 
-If there are problems, open an issue on this github repository.
+If there are problems or questions, open an issue on this github repository.
 
 ## microchip file tree
 ````
@@ -40,17 +41,30 @@ If there are problems, open an issue on this github repository.
 ````
 
 ## Examples
-This is just the micropg_lite code. At least one network connection must be established beforehand. 
+You need to establish a network connection before executing micropg_lite code. 
 
-For more examples see the examples folder. In the examples folder you will also find the database and data that uses this example code. The micropython scripts in the examples directory also make a wifi connection.
+### examples/ folder
+The examples/ folder includes the database sql script which was used to create the database and the used data in all those examples. The examples folder also includes the full scripts used in this readme including the wifi connection template.
 
-### SELECT example:
+### SELECT example with wifi connection:
 ````python
+import network   # Handles the wifi connection
 import micropg_lite
+
+### To Do: Fill in your wifi connection data and change the server data
+ssid = 'wifissid' # replace the string with your wifi ssid
+password = 'secret' # replase tge string with your wifi password
+
+# Connect to network
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(ssid, password)
+
+print("Wifi connected")
 
 conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
                     user='postgres', # replace the string with your user
-                    password='secret', # replace the string with your password
+                    password='123456', # replace the string with your password
                     database='exampledatabase')
 cur = conn.cursor()
 
@@ -81,6 +95,18 @@ conn.close()
 
 ````
 
+### UPDATE example
+```` python
+conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
+                    user='postgres', # replace the string with your user
+                    password='123456', # replace the string with your password
+                    database='exampledatabase')
+cur = conn.cursor()
+
+cur.execute('update customers set firstName=\'UpdatedFirstName\' where id=2;')
+conn.close()
+````
+
 ### DELETE example
 ```` python
 conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
@@ -94,28 +120,12 @@ conn.close()
 
 ````
 
-### UPDATE example
-```` python
-conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
-                    user='postgres', # replace the string with your user
-                    password='123456', # replace the string with your password
-                    database='exampledatabase')
-cur = conn.cursor()
-
-cur.execute('update customers set firstName=\'UpdatedFirstName\' where id=2;')
-conn.close()
-````
-
-## micropg_lite sql handling
-- You have to set some data static. See installation part of this readme
-- You have to put ids into ''. See insert example (id)
-- Escape parameters are not allways working. You may have to change your queries.
+## micropg_lite sql handling and restrictions
+- You have to put IDs into ' '. For example, see the IDs in the `insert example`
+- Escape parameters are not always working. You may have to change your queries. For example, take a look at the sql query used in the `update example`
 - You can only commit. Rollback is in `micropg_lite` not supported
 - You can only execute INSERT, SELECT, UPDATE and DELETE statements
-- You can not execute "CREATE DATABASE" or "DROP DATABASE" queries
-
-
-## Other restrictions and unsupported features
-- Supported Authentication METHOD are only 'trust' and 'scram-sha-256'.
+- You cannot execute "CREATE DATABASE" or "DROP DATABASE" queries
+- Supported Authentication METHOD is only 'trust' and 'scram-sha-256'.
 - Not support for array data types.
 - Not support for prepared statements.
