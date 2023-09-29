@@ -1,7 +1,9 @@
 -- Create the database
 CREATE DATABASE exampledatabase;
 
--- You have to switch to the new database
+-- !IMPORTANT! You have to switch to the new database which just was created
+-- In PGAdmin4 you have to refresh the left tab, then select the new database and open the query tool
+
 -- Create Table for testing
 CREATE TABLE customers (
   id INT PRIMARY KEY,
