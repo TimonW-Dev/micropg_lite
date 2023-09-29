@@ -17,7 +17,7 @@ The disadvantage of micropg_lite is that it cannot execute "CREATE DATABASE" or 
 1. Download the `micropg_lite.py` and the `getServerData.py` file to the local computer.
 2. Run the getServerData.py file on your local machine. Enter the server information. The getServerData.py file will then provide you with data that you should cache.
 
-- NOTE: The sendServerData.py script is a slightly modified version of the [micropg](https://github.com/nakagami/micropg) library. This fetches all dynamic data from the PostgreSQL server which must be set statically in the micropg_lite.py file. This is done automatically with the [micropg](https://github.com/nakagami/micropg) library, but is set statically in the micropg_lite library to save performance.
+- NOTE: The getServerData.py script is a slightly modified version of the [micropg](https://github.com/nakagami/micropg) library. This fetches all dynamic data from the PostgreSQL server which must be set statically in the micropg_lite.py file. This is done automatically with the [micropg](https://github.com/nakagami/micropg) library, but is set statically in the micropg_lite library to save performance.
 
 3. At the top of the micropg_lite.py file is a to-do list. Now you have to work through this todo list. Highlight the selected commented line and press CRTL+F, then replace the value assigned to the variable with the value given to you by the getServerData.py file. Then save the script.
 
