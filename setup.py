@@ -8,7 +8,7 @@ setup(
     version="2.1.0",
     author="TimonW-Dev",
     author_email="timon-github@outlook.com",
-    description="A lightweight micropython PostgreSQL driver made for ESP8266 and other microchips with less ram",
+    description="A MicroPython PostgreSQL database driver made for microcontrollers (specifically for ESP8266) that are low on RAM.",
     long_description=long_description,
     long_description_content_type="text/markdown",  
     url="https://github.com/TimonW-Dev/micropg_lite",
