@@ -29,3 +29,6 @@ Thanks to [Betafloof](https://github.com/BetaFloof) for the support ([Pull reque
 ### micropg_lite-V2.1.0 (29.9.2023)
 - README.md updated
 - Made everything ready for the pypi.org package
+
+#### micropg_lite-V2.1.1 (11.3.2024)
+- Slight changes adopted from nakagami
