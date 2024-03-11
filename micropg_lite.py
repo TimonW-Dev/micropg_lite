@@ -1,7 +1,7 @@
 #############################################################################
 # The MIT License (MIT)
 #
-# Copyright (c) 2014-2019, 2021-2022 Hajime Nakagami
+# Copyright (c) 2014-2019, 2021-2024 Hajime Nakagami
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@
 # https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.h
 # -----------------------------------------------------------------------------
 
-### Version 2.1.0
+### Version 2.1.1
 
 from hashlib import sha256
 from random import getrandbits
@@ -151,7 +151,7 @@ class Connection(object):
             elif code == 82:
                 auth_method = _bytes_to_bint(data[:4])
                 if auth_method == 10:
-                    assert data[4:-2].decode('utf-8') == 'SCRAM-SHA-256'
+                    assert b'SCRAM-SHA-256\x00\x00' in data
                     client_nonce = str(getrandbits(32))
                     first_message = 'n,,n=,r=' + client_nonce
                     self._send_data(b'p',
