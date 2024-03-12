@@ -32,3 +32,6 @@ Thanks to [Betafloof](https://github.com/BetaFloof) for the support ([Pull reque
 
 #### micropg_lite-V2.1.1 (11.3.2024)
 - Slight changes adopted from nakagami
+
+#### Memory test (12.3.2024, no release)
+- Replaced the old memory test by a new one which gives the exact bytes
