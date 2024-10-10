@@ -32,16 +32,12 @@ import socket
 import binascii
 import random
 
-# VERSION: 0.0.1
-
 # -----------------------------------------------------------------------------
 
 
 def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
-    ik = bytes(0x36 ^ b for b in pad_key)
-    ok = bytes(0x5c ^ b for b in pad_key)
-    return hashlib.sha256(ok + hashlib.sha256(ik + msg).digest()).digest()
+    return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
 
 def pbkdf2_hmac_sha256(password_bytes, salt, iterations):
     u1 = hmac_sha256_digest(password_bytes, salt + b'\x00\x00\x00\x01')
@@ -315,9 +311,6 @@ class Connection(object):
         if t in (list, tuple): return 'ARRAY[' + ','.join([self.escape_parameter(e) for e in v]) + ']'
         return "'" + str(v) + "'"
 
-    @property
-    def is_dirty(self): return self._ready_for_query in b'TE'
-
     def is_connect(self): return bool(self.sock)
 
     def cursor(self): return Cursor(self)
@@ -331,10 +324,6 @@ class Connection(object):
         
         if self.autocommit:
             self.commit()
-
-    @property
-    def isolation_level(self):
-        return self.get_parameter_status('TRANSACTION ISOLATION LEVEL')
 
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
