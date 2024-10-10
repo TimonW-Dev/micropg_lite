@@ -1,5 +1,5 @@
 import network   # Handles the wifi connection
-import nanopg
+import micropg_lite
 import time
 
 ### To Do: Fill in your wifi connection data and change the server data
@@ -24,7 +24,7 @@ while not wlan.isconnected():
 
 print("Wifi connected")
 
-conn = nanopg.connect(host=db_host,
+conn = micropg_lite.connect(host=db_host,
                     user=db_user,
                     password=db_password,
                     database=db_database)
