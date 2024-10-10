@@ -88,8 +88,7 @@ class Cursor:
         self._check_connection()
         self.description, self._rows = [], []
         if args:
-            escaped_args = tuple(self.connection.escape_parameter(arg).replace('%', '%%') for arg in args)
-            query = query.replace('%', '%%').replace('%%s', '%s') % escaped_args
+            query = query.replace('%', '%%').replace('%%s', '%s') % tuple(self.connection.escape_parameter(arg).replace('%', '%%') for arg in args)
             query = query.replace('%%', '%')
         self.query = query
         self.connection.execute(query, self)
@@ -98,9 +97,9 @@ class Cursor:
         self._rowcount = sum(self.execute(query, params)._rowcount for params in seq_of_params)
 
     def fetchall(self):
-        r = self._rows
+        rows = self._rows
         self._rows = []
-        return r
+        return rows
 
     def close(self): self.connection = None
 
@@ -132,9 +131,6 @@ class Connection(object):
     def __exit__(self, exc, value, traceback):
         self.close()
 
-    def _send_data(self, message, data):
-        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data]))
-
     def _send_message(self, message, data):
         self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
 
@@ -157,7 +153,8 @@ class Connection(object):
                     printable = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/'
                     client_nonce = ''.join(printable[random.getrandbits(6)] for _ in range(24))
                     client_first = f'n,,n=,r={client_nonce}'.encode('utf-8')
-                    self._send_data(b'p', b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(client_first)) + client_first)
+                    self._write(b''.join([b'p',_bint_to_bytes(len(b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(client_first)) + client_first) + 4),b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(client_first)) + client_first]))
+
                     
                     assert ord(self._read(1)) == 82
                     data = self._read(_bytes_to_bint(self._read(4)) - 4)
@@ -170,11 +167,10 @@ class Connection(object):
                     client_key = hmac_sha256_digest(salt_pass, b"Client Key")
                     
                     auth_msg = f"n=,r={client_nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
-                    client_sig = hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))
                     
-                    proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, client_sig))).rstrip(b'\n')
+                    proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
                     client_final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
-                    self._send_data(b'p', client_final)
+                    self._write(b''.join([b'p',_bint_to_bytes(len(client_final) + 4),client_final]))
                     
                     assert ord(self._read(1)) == 82
                     data = self._read(_bytes_to_bint(self._read(4)) - 4)
