@@ -23,6 +23,8 @@ wlan.connect(ssid, password)
 print("Wifi connected")
 print("\n---\n")
 
+start_time = time.time()
+
 conn = micropg_lite.connect(host=db_host,
                     user=db_user,
                     password=db_password,
@@ -140,3 +142,7 @@ try:
 except Exception:
     print("CREATE DATABASE !!!failed!!!, DROP DATABASE will also fail")
     print("\n---\n")
+
+end_time = time.time()
+duration = end_time - start_time
+print(f"Script duration: {duration:.3f} Sekunden")
