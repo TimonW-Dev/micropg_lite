@@ -1,7 +1,7 @@
-# This script is made to test the functionality of nanopg after making changes to the source
+# This script is made to test the functionality of micropg_lite after making changes to the source
 
 import network   # Handles the wifi connection
-import nanopg
+import micropg_lite
 import time
 
 ### To Do: Fill in your wifi connection data and change the server data
@@ -23,7 +23,7 @@ wlan.connect(ssid, password)
 print("Wifi connected")
 print("\n---\n")
 
-conn = nanopg.connect(host=db_host,
+conn = micropg_lite.connect(host=db_host,
                     user=db_user,
                     password=db_password,
                     database=db_database)
@@ -120,14 +120,14 @@ conn.close()
 
 ### CREATE & DROP DATABASE test
 try:
-    nanopg.create_database(
+    micropg_lite.create_database(
         host=db_host, user=db_user, password=db_password, database='testDatabase'
     )
     print("CREATE DATABASE ok")
     print("\n---\n")
     
     try:
-        nanopg.drop_database(
+        micropg_lite.drop_database(
             host=db_host, user=db_user, password=db_password, database='testDatabase'
         )
         print("DROP DATABASE ok")

@@ -3,7 +3,7 @@ import gc
 before = gc.mem_free()
 #---Place your code here---
 
-import nanopg
+import micropg_lite
 
 #--------------------------
 after = gc.mem_free()
