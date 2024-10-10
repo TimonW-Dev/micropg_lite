@@ -1,15 +1,4 @@
-# micropg_lite (The worlds lightest PostgreSQL driver for micropython)
-
-A MicroPython PostgreSQL database driver made for microcontrollers (specifically for ESP8266) that are low on RAM.
-
-## Difference between [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) and [micropg](https://github.com/nakagami/micropg)
-
-[micropg_lite](https://github.com/TimonW-Dev/micropg_lite) is a lightweight version based on [micropg](https://github.com/nakagami/micropg) by [
-nakagami](https://github.com/nakagami). If you have RAM/memory issues with [micropg](https://github.com/nakagami/micropg) than this library might solve this issue.
-
-The [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) library has some limitations in functionality due to the lightweight.
-
-**For more information, see** [micropg_lite-sql-handling-and-restrictions](#micropg_lite-sql-handling-and-restrictions)
+# micropg_lite
 
 ## Installation
 
@@ -49,8 +38,8 @@ import network   # Handles the wifi connection
 import micropg_lite
 
 ### To Do: Fill in your wifi connection data and change the server data
-ssid = 'wifissid' # replace the string with your wifi ssid
-password = 'secret' # replase tge string with your wifi password
+ssid = 'wifissid'
+password = 'secret'
 
 # Connect to network
 wlan = network.WLAN(network.STA_IF)
@@ -87,7 +76,8 @@ conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your ser
                     database='exampledatabase')
 cur = conn.cursor()
 
-cur.execute('INSERT INTO customers (id, firstName, lastName, email) values (%s, %s, %s, %s)', ['5', 'David', 'Wilson', 'david.wilson@example.com'])
+cur.execute('INSERT INTO customers (id, firstName, lastName, email) values (%s, %s, %s, %s)', [5, 'David', 'Wilson', 'david.wilson@example.com'])
+conn.commit()
 conn.close()
 
 ````
@@ -100,7 +90,8 @@ conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your ser
                     database='exampledatabase')
 cur = conn.cursor()
 
-cur.execute('update customers set firstName=\'UpdatedFirstName\' where id=2;')
+cur.execute("update customers set firstName='UpdatedFirstName' where id=2;")
+conn.commit()
 conn.close()
 ````
 
@@ -112,17 +103,12 @@ conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your ser
                     database='exampledatabase')
 cur = conn.cursor()
 
-cur.execute('delete from customers where id=1;')
+cur.execute("delete from customers where id=1;")
+conn.commit()
 conn.close()
 
 ````
 
-## micropg_lite sql handling and restrictions
-- You have to put IDs into ' '. For example, see the IDs in the `
-[insert example](#insert-example)
-- Escape parameters are not always working. You may have to change your queries. For example, take a look at the sql query used in the [update example](#update-example)
-- You can only commit. Rollback is in [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) not supported
-- You can only execute INSERT, SELECT, UPDATE and DELETE statements
-- You cannot execute "CREATE DATABASE" or "DROP DATABASE" queries
-- Not support for array data types.
-- Not support for prepared statements.
+## micropg_lite limitations
+- reduced error handling
+- no MD5 auth method support
