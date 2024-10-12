@@ -21,7 +21,7 @@ wlan.active(True)
 wlan.connect(ssid, password)
 
 print("Wifi connected")
-print("\n---\n")
+print("---")
 
 start_time = time.time()
 
@@ -31,6 +31,7 @@ conn = micropg_lite.connect(host=db_host,
                     database=db_database)
 cur = conn.cursor()
 
+successCount = 0
 
 ### SELECT test
 cur.execute("SELECT c.firstName || ' ' || c.lastName AS customer_name, c.email, c.birthDate, o.orderDate, o.status, p.name AS product_name, p.price, oi.quantity, cat.name AS category_name, i.lastRestockDate, COALESCE(p.description, 'No description available') AS product_description, CASE WHEN c.loyaltyPoints > 500 THEN 'VIP' WHEN c.loyaltyPoints > 100 THEN 'Regular' ELSE 'New' END AS customer_status, c.birthDate AS customer_birth_date FROM customers c LEFT JOIN orders o ON c.id = o.customerId LEFT JOIN order_items oi ON o.id = oi.orderId LEFT JOIN products p ON oi.productId = p.id LEFT JOIN categories cat ON p.categoryId = cat.id RIGHT JOIN inventory i ON p.id = i.productId WHERE o.orderDate >= '2024-03-20' AND i.quantity > 0 ORDER BY o.orderDate DESC LIMIT 5;")
@@ -44,8 +45,9 @@ if expectedresult == str(selectresult):
     print("SELECT ok")
 else:
     print("SELECT !!!failed!!!")
+    successCount = successCount + 1
 
-print("\n---\n")
+print("---")
 
 ### INSERT test
 cur.execute("INSERT INTO customers (firstName, lastName, email, birthDate, specialNote, loyaltyPoints) VALUES ('Jörg@', 'Müller-Schmïdt#', 'joerg.mueller-schmidt@täst.com', '1976-09-13', 'VIP & allergisch gegen Laktose; bevorzugt Bio-Produkte!', 666)")
@@ -58,8 +60,9 @@ if (selectresult[0][0] == 13):
     print("INSERT ok")
 else:
     print("INSERT !!!failed!!!")
+    successCount = successCount + 1
 
-print("\n---\n")
+print("---")
 
 ### UPDATE test
 cur.execute("UPDATE customers SET firstName = 'Jörg-Ülrîch™', lastName = 'Müllèr-van der Schmïdt§', email = 'joerg.ueli+mueller-schmidt_123@tæst.çøm', specialNote = CONCAT(specialNote, ' | Achtung: Name geändert! (ツ)_/¯'), loyaltyPoints = loyaltyPoints + 42 WHERE firstName = 'Jörg@' AND lastName = 'Müller-Schmïdt#'")
@@ -73,7 +76,7 @@ if(selectresult[0][0] == "Jörg-Ülrîch™"):
 else:
     print("UPDATE !!!failed!!!")
 
-print("\n---\n")
+print("---")
 
 ### DELETE test
 cur.execute("DELETE FROM customers WHERE firstName = 'Jörg-Ülrîch™' AND lastName = 'Müllèr-van der Schmïdt§'")
@@ -86,8 +89,41 @@ if (selectresult[0][0] == 12):
     print("DELETE ok")
 else:
     print("DELETE !!!failed!!!")
+    successCount = successCount + 1
 
-print("\n---\n")
+print("---")
+
+
+### Rollback test
+
+cur.execute('select count(id) from categories;')
+selectresult = cur.fetchall()
+
+if (selectresult[0][0] != 7):
+    print("!!!failed!!! Can't test ROLLBACK because there are to many entries in the categories test table")
+    successCount = successCount + 1
+    
+else:
+    cur.execute("insert into categories (id, name, parentcategoryid) VALUES (99, 'Rollback Test', NULL);")
+    
+    cur.execute('select count(id) from categories;')
+    selectresult = cur.fetchall()
+    
+    if (selectresult[0][0] == 8):
+        conn.rollback()
+        cur.execute('select count(id) from categories;')
+        selectresult = cur.fetchall()
+        if (selectresult[0][0] == 7):
+            print("ROLLBACK ok")
+        else:
+            print("ROLLBACK !!!failed!!!")
+            successCount = successCount + 1
+    else:
+        print("!!!failed!!! Can't test ROLLBACK, there were some issues with the insert into the categories test table")
+        successCount = successCount + 1
+    
+print("---")
+
 
 ### CREATE TABLE test
 cur.execute('CREATE TABLE testTable (testChar varchar(45), testInt Int, testDate date);')
@@ -100,8 +136,9 @@ if (selectresult[0][0] == 7):
     print("CREATE TABLE ok")
 else:
     print("CREATE TABLE !!!failed!!!")
+    successCount = successCount + 1
 
-print("\n---\n")
+print("---")
 
 ### DROP TABLE test
 cur.execute('DROP TABLE testTable;')
@@ -114,8 +151,9 @@ if (selectresult[0][0] == 6):
     print("DROP TABLE ok")
 else:
     print("DROP TABLE !!!failed!!!")
+    successCount = successCount + 1
 
-print("\n---\n")
+print("---")
 
 ### Close connection - prepeare for next step
 conn.close()
@@ -126,23 +164,37 @@ try:
         host=db_host, user=db_user, password=db_password, database='testDatabase'
     )
     print("CREATE DATABASE ok")
-    print("\n---\n")
+    print("---")
     
     try:
         micropg_lite.drop_database(
             host=db_host, user=db_user, password=db_password, database='testDatabase'
         )
         print("DROP DATABASE ok")
-        print("\n---\n")
+        print("---")
 
     except Exception:
         print("DROP DATABASE !!!failed!!!")
-        print("\n---\n")
+        successCount = successCount + 1
+        print("---")
     
 except Exception:
     print("CREATE DATABASE !!!failed!!!, DROP DATABASE will also fail")
-    print("\n---\n")
+    successCount = successCount + 1
+    print("---")
+
+### Test end. Finish script
+print("\n---")
+
+if (successCount == 0):
+    print("All tests completed SUCCESSFULLY")
+else:
+    print("!!! At least one test failed !!!")
+
+print("\n")
 
 end_time = time.time()
 duration = end_time - start_time
 print(f"Script duration: {duration:.3f} Sekunden")
+
+print("---")
