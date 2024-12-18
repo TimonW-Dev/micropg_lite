@@ -139,8 +139,7 @@ class Connection(object):
             if code == 90:
                 self._ready_for_query = data
                 break
-
-
+            
             elif code == 82:
                 auth_method = _bytes_to_bint(data[:4])
                 if auth_method == 0:
@@ -175,9 +174,7 @@ class Connection(object):
                     assert ord(self._read(1)) == 82
                     data = self._read(_bytes_to_bint(self._read(4)) - 4)
                     assert _bytes_to_bint(data[:4]) == 0
-
-
-
+                    
                 else:
                     raise Exception(u"08003:Lost connection")
             
