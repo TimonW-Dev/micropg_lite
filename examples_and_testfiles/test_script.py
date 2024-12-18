@@ -20,6 +20,10 @@ wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect(ssid, password)
 
+while not wlan.isconnected():
+    print("Wifi Status: ", wlan.status())
+    time.sleep(1)
+
 print("Wifi connected")
 print("---")
 
