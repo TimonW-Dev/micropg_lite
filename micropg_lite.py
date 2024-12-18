@@ -48,21 +48,15 @@ def pbkdf2_hmac_sha256(password_bytes, salt, iterations):
     return ui.to_bytes(32, 'big')
 
 def _decode_column(data, oid, encoding):
+    if data is None:
+        return None
     data = data.decode(encoding)
-    if oid == 16: return data == 't'
-    if oid in (21, 23, 20, 26): return int(data)
-    if oid in (700, 701): return float(data)
-    if oid == 17:
-        return bytes(int(data[i:i+2], 16) for i in range(2, len(data), 2))
-    if oid in (1005, 1007): return [int(i) for i in data[1:-1].split(',')]
-    if oid in (1003, 1009): return data[1:-1].split(',')
-    if oid == 1021: return [float(f) for f in data[1:-1].split(',')]
-    if oid == 22: return [int(i) for i in data.split()]
-    if oid == 600: return tuple(map(float, data[1:-1].split(',')))
-    if oid == 718:
-        p, r = data[1:].split(')')
-        return (tuple(map(float, p.split(','))), float(r[1:]))
-    if oid in (601, 602, 603, 604, 628): return eval(data)
+    if oid == 16:
+        return data == 't'
+    if oid in (21, 23, 20, 26):
+        return int(data)
+    if oid in (700, 701):
+        return float(data)
     return data
 
 def _bytes_to_bint(b):
