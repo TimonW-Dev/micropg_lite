@@ -139,40 +139,45 @@ class Connection(object):
             if code == 90:
                 self._ready_for_query = data
                 break
+
+
             elif code == 82:
                 auth_method = _bytes_to_bint(data[:4])
-                if auth_method == 0: pass  # trust
+                if auth_method == 0:
+                    pass  # trust
                 elif auth_method == 10:  # SASL
                     assert b'SCRAM-SHA-256\x00\x00' in data
                     printable = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/'
                     client_nonce = ''.join(printable[random.getrandbits(6)] for _ in range(24))
                     client_first = f'n,,n=,r={client_nonce}'.encode('utf-8')
-                    self._write(b''.join([b'p',_bint_to_bytes(len(b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(client_first)) + client_first) + 4),b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(client_first)) + client_first]))
+                    scram_msg = b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(client_first)) + client_first
+                    self._write(b'p' + _bint_to_bytes(len(scram_msg) + 4) + scram_msg)
 
-                    
                     assert ord(self._read(1)) == 82
                     data = self._read(_bytes_to_bint(self._read(4)) - 4)
                     assert _bytes_to_bint(data[:4]) == 11  # SCRAM first
-                    
+
                     server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
                     assert server['r'].startswith(client_nonce)
-                    
+
                     salt_pass = pbkdf2_hmac_sha256(self.password.encode('utf-8'), binascii.a2b_base64(server['s']), int(server['i']))
                     client_key = hmac_sha256_digest(salt_pass, b"Client Key")
-                    
+
                     auth_msg = f"n=,r={client_nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
-                    
                     proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
                     client_final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
-                    self._write(b''.join([b'p',_bint_to_bytes(len(client_final) + 4),client_final]))
-                    
+                    self._write(b'p' + _bint_to_bytes(len(client_final) + 4) + client_final)
+
                     assert ord(self._read(1)) == 82
                     data = self._read(_bytes_to_bint(self._read(4)) - 4)
                     assert _bytes_to_bint(data[:4]) == 12  # SCRAM final
-                    
+
                     assert ord(self._read(1)) == 82
                     data = self._read(_bytes_to_bint(self._read(4)) - 4)
                     assert _bytes_to_bint(data[:4]) == 0
+
+
+
                 else:
                     raise Exception(u"08003:Lost connection")
             
