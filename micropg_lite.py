@@ -72,7 +72,6 @@ class Cursor:
         self.description = []
         self._rows = []
         self._rowcount = self.arraysize = 0
-        self.query = None
 
     def _check_connection(self):
         if not self.connection or not self.connection.is_connect():
@@ -84,7 +83,6 @@ class Cursor:
         if args:
             query = query.replace('%', '%%').replace('%%s', '%s') % tuple(self.connection.escape_parameter(arg).replace('%', '%%') for arg in args)
             query = query.replace('%%', '%')
-        self.query = query
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
@@ -95,10 +93,8 @@ class Cursor:
         self._rows = []
         return rows
 
-    def close(self): self.connection = None
-
-    def callproc(self, procname, args=()):
-        raise Exception("08003:Lost connection")
+    def close(self):
+        self.connection = None
 
 
 class Connection(object):
@@ -114,9 +110,6 @@ class Connection(object):
         self.autocommit = False
         self.server_version = ''
         self._ready_for_query = b'I'
-        self.encoders = {}
-        self.tz_name = None
-        self.tzinfo = None
         self._open()
 
     def __enter__(self):
@@ -139,7 +132,7 @@ class Connection(object):
             if code == 90:
                 self._ready_for_query = data
                 break
-            
+                
             elif code == 82:
                 auth_method = _bytes_to_bint(data[:4])
                 if auth_method == 0:
@@ -192,7 +185,7 @@ class Connection(object):
                     except (IndexError, ValueError):
                         pass
                 elif k == b'TimeZone':
-                    self.tz_name, self.tzinfo = v.decode('ascii'), None
+                    self.tz_name = v.decode('ascii')
             elif code == 67 and obj:
                 cmd = data[:-1].decode('ascii')
                 if cmd == 'SHOW':
@@ -247,12 +240,9 @@ class Connection(object):
                     self._write(b'd' + _bint_to_bytes(len(buf) + 4) + buf)
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
 
-    def process_messages(self, obj):
-        err = self._process_messages(obj)
-        if err: raise err
-
     def _read(self, ln):
-        if not self.sock: raise Exception("08003:Lost connection")
+        if not self.sock:
+            raise Exception("08003:Lost connection")
         r = bytearray(ln)
         pos = 0
         while pos < ln:
@@ -260,13 +250,15 @@ class Connection(object):
                 chunk = self.sock.read(ln - pos)
             else:
                 chunk = self.sock.recv(ln - pos)
-            if not chunk: raise Exception("08003:Lost connection")
+            if not chunk:
+                raise Exception("08003:Lost connection")
             r[pos:pos+len(chunk)] = chunk
             pos += len(chunk)
         return bytes(r)
 
     def _write(self, b):
-        if not self.sock: raise Exception("08003:Lost connection")
+        if not self.sock:
+            raise Exception("08003:Lost connection")
         pos = 0
         while pos < len(b):
             if hasattr(self.sock, "write"):
@@ -291,28 +283,34 @@ class Connection(object):
             v += b'database\x00' + self.database.encode('ascii') + b'\x00'
         v += b'\x00'
         self._write(_bint_to_bytes(len(v) + 4) + v)
-        self.process_messages(None)
+        self._process_messages(None)
 
     def escape_parameter(self, v):
-        if v is None: return 'NULL'
+        if v is None:
+            return 'NULL'
         t = type(v)
-        if t in self.encoders: return self.encoders[t](self, v)
-        if t == str: return "'" + v.replace("'", "''") + "'"
-        if t in (bytearray, bytes): return "'" + ''.join(['\\%03o' % c for c in v]) + "'::bytea"
-        if t == bool: return 'TRUE' if v else 'FALSE'
-        if t in (list, tuple): return 'ARRAY[' + ','.join([self.escape_parameter(e) for e in v]) + ']'
+        if t == str:
+            return "'" + v.replace("'", "''") + "'"
+        if t in (bytearray, bytes):
+            return "'" + ''.join(['\\%03o' % c for c in v]) + "'::bytea"
+        if t == bool:
+            return 'TRUE' if v else 'FALSE'
+        if t in (list, tuple):
+            return 'ARRAY[' + ','.join([self.escape_parameter(e) for e in v]) + ']'
         return "'" + str(v) + "'"
 
-    def is_connect(self): return bool(self.sock)
+    def is_connect(self):
+        return bool(self.sock)
 
-    def cursor(self): return Cursor(self)
+    def cursor(self):
+        return Cursor(self)
 
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
             self.begin()
         
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
-        self.process_messages(obj)
+        self._process_messages(obj)
         
         if self.autocommit:
             self.commit()
@@ -332,21 +330,17 @@ class Connection(object):
     def commit(self):
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
-            self.process_messages(None)
+            self._process_messages(None)
             self._begin()
 
     def _rollback(self):
         if self.sock:
             self._send_message(b'Q', b"ROLLBACK\x00")
-            self.process_messages(None)
+            self._process_messages(None)
 
     def rollback(self):
         self._rollback()
         self.begin()
-
-    def reopen(self):
-        self.close()
-        self._open()
 
     def close(self):
         if self.sock:
@@ -364,12 +358,11 @@ def create_database(database, host, user, password='', port=None, use_ssl=False)
     with connect(host, user, password, None, port, None, use_ssl) as conn:
         conn._rollback()
         conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-        conn.process_messages(None)
+        conn._process_messages(None)
 
 
 def drop_database(database, host, user, password='', port=None, use_ssl=False):
     with connect(host, user, password, None, port, None, use_ssl) as conn:
         conn._rollback()
         conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-        conn.process_messages(None)
-
+        conn._process_messages(None)
