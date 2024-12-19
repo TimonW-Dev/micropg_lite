@@ -97,7 +97,7 @@ class Cursor:
         self.connection = None
 
 
-class Connection(object):
+class Connection:
     def __init__(self, user, password, database, host, port, timeout, use_ssl):
         self.user = user
         self.password = password
