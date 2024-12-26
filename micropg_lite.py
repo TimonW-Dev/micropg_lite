@@ -47,18 +47,6 @@ def pbkdf2_hmac_sha256(password_bytes, salt, iterations):
         ui ^= int.from_bytes(u1, 'big')
     return ui.to_bytes(32, 'big')
 
-def _decode_column(data, oid, encoding):
-    if data is None:
-        return None
-    data = data.decode(encoding)
-    if oid == 16:
-        return data == 't'
-    if oid in (21, 23, 20, 26):
-        return int(data)
-    if oid in (700, 701):
-        return float(data)
-    return data
-
 def _bytes_to_bint(b):
     return int.from_bytes(b, 'big')
 
@@ -223,7 +211,23 @@ class Connection:
                         n += 4
                     else:
                         ln = _bytes_to_bint(data[n:n+4])
-                        row.append(_decode_column(data[n+4:n+4+ln], obj.description[len(row)][1], self.encoding))
+                        col_data = data[n+4:n+4+ln]
+                        col_oid = obj.description[len(row)][1]
+                        col_encoding = self.encoding
+
+                        # Inline _decode_column logic
+                        if col_data is None:
+                            decoded_data = None
+                        else:
+                            decoded_data = col_data.decode(col_encoding)
+                            if col_oid == 16:
+                                decoded_data = (decoded_data == 't')
+                            elif col_oid in (21, 23, 20, 26):
+                                decoded_data = int(decoded_data)
+                            elif col_oid in (700, 701):
+                                decoded_data = float(decoded_data)
+
+                        row.append(decoded_data)
                         n += ln + 4
                 obj._rows.append(tuple(row))
             elif code == 69:
