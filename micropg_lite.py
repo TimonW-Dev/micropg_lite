@@ -39,9 +39,6 @@ def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
     return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
 
-def _bint_to_bytes(val):
-    return val.to_bytes(4, 'big')
-
 class Cursor:
     def __init__(self, connection):
         self.connection = connection
@@ -94,7 +91,7 @@ class Connection:
         self.close()
 
     def _send_message(self, message, data):
-        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
+        self._write(b''.join([message, (len(data) + 4).to_bytes(4, 'big'), data, b'H\x00\x00\x00\x04']))
 
     def _process_messages(self, obj):
         while True:
@@ -117,8 +114,8 @@ class Connection:
                     printable = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/'
                     client_nonce = ''.join(printable[random.getrandbits(6)] for _ in range(24))
                     client_first = f'n,,n=,r={client_nonce}'.encode('utf-8')
-                    scram_msg = b'SCRAM-SHA-256\x00' + _bint_to_bytes(len(client_first)) + client_first
-                    self._write(b'p' + _bint_to_bytes(len(scram_msg) + 4) + scram_msg)
+                    scram_msg = b'SCRAM-SHA-256\x00' + (len(client_first)).to_bytes(4, 'big') + client_first
+                    self._write(b'p' + (len(scram_msg) + 4).to_bytes(4, 'big') + scram_msg)
 
                     assert ord(self._read(1)) == 82
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
@@ -144,7 +141,7 @@ class Connection:
                     auth_msg = f"n=,r={client_nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
                     proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
                     client_final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
-                    self._write(b'p' + _bint_to_bytes(len(client_final) + 4) + client_final)
+                    self._write(b'p' + (len(client_final) + 4).to_bytes(4, 'big') + client_final)
 
                     assert ord(self._read(1)) == 82
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
@@ -239,7 +236,7 @@ class Connection:
                     buf = obj.read(8192)
                     if not buf:
                         break
-                    self._write(b'd' + _bint_to_bytes(len(buf) + 4) + buf)
+                    self._write(b'd' + (len(buf) + 4).to_bytes(4, 'big') + buf)
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
 
     def _read(self, ln):
@@ -275,7 +272,7 @@ class Connection:
         if self.timeout is not None:
             self.sock.settimeout(float(self.timeout))
         if self.use_ssl:
-            self._write(_bint_to_bytes(8) + _bint_to_bytes(80877103))
+            self._write((8).to_bytes(4, 'big') + (80877103).to_bytes(4, 'big'))
             if self._read(1) == b'S':
                 self.sock = ssl.wrap_socket(self.sock)
             else:
@@ -284,7 +281,7 @@ class Connection:
         if self.database:
             v += b'database\x00' + self.database.encode('ascii') + b'\x00'
         v += b'\x00'
-        self._write(_bint_to_bytes(len(v) + 4) + v)
+        self._write((len(v) + 4).to_bytes(4, 'big') + v)
         self._process_messages(None)
 
     def escape_parameter(self, v):
