@@ -25,6 +25,7 @@
 # PostgreSQL driver for micropython https://github.com/micropython/micropython but it's more lightweight and made for ESP8266
 # It's a micropg (https://github.com/nakagami/micropg) subset.
 # micropg (https://github.com/nakagami/micropg) a minipg (https://github.com/nakagami/minipg) subset.
+##############################################################################
 
 import ssl
 import hashlib
@@ -34,25 +35,15 @@ import random
 
 # -----------------------------------------------------------------------------
 
-
 def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
     return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
-
-def pbkdf2_hmac_sha256(password_bytes, salt, iterations):
-    u1 = hmac_sha256_digest(password_bytes, salt + b'\x00\x00\x00\x01')
-    ui = int.from_bytes(u1, 'big')
-    for _ in range(iterations - 1):
-        u1 = hmac_sha256_digest(password_bytes, u1)
-        ui ^= int.from_bytes(u1, 'big')
-    return ui.to_bytes(32, 'big')
 
 def _bytes_to_bint(b):
     return int.from_bytes(b, 'big')
 
 def _bint_to_bytes(val):
     return val.to_bytes(4, 'big')
-
 
 class Cursor:
     def __init__(self, connection):
@@ -83,7 +74,6 @@ class Cursor:
 
     def close(self):
         self.connection = None
-
 
 class Connection:
     def __init__(self, user, password, database, host, port, timeout, use_ssl):
@@ -120,7 +110,7 @@ class Connection:
             if code == 90:
                 self._ready_for_query = data
                 break
-                
+
             elif code == 82:
                 auth_method = _bytes_to_bint(data[:4])
                 if auth_method == 0:
@@ -140,7 +130,18 @@ class Connection:
                     server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
                     assert server['r'].startswith(client_nonce)
 
-                    salt_pass = pbkdf2_hmac_sha256(self.password.encode('utf-8'), binascii.a2b_base64(server['s']), int(server['i']))
+                    # Inlined pbkdf2_hmac_sha256 logic
+                    password_bytes = self.password.encode('utf-8')
+                    salt = binascii.a2b_base64(server['s'])
+                    iterations = int(server['i'])
+
+                    u1 = hmac_sha256_digest(password_bytes, salt + b'\x00\x00\x00\x01')
+                    ui = int.from_bytes(u1, 'big')
+                    for _ in range(iterations - 1):
+                        u1 = hmac_sha256_digest(password_bytes, u1)
+                        ui ^= int.from_bytes(u1, 'big')
+                    salt_pass = ui.to_bytes(32, 'big')
+
                     client_key = hmac_sha256_digest(salt_pass, b"Client Key")
 
                     auth_msg = f"n=,r={client_nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
@@ -155,10 +156,10 @@ class Connection:
                     assert ord(self._read(1)) == 82
                     data = self._read(_bytes_to_bint(self._read(4)) - 4)
                     assert _bytes_to_bint(data[:4]) == 0
-                    
+
                 else:
                     raise Exception(u"08003:Lost connection")
-            
+
             elif code == 83:
                 k, v, _ = data.split(b'\x00')
                 if k == b'server_encoding':
@@ -312,10 +313,10 @@ class Connection:
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
             self.begin()
-        
+
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self._process_messages(obj)
-        
+
         if self.autocommit:
             self.commit()
 
@@ -353,17 +354,14 @@ class Connection:
             self.sock.close()
             self.sock = None
 
-
 def connect(host, user, password='', database=None, port=None, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port if port else 5432, timeout, use_ssl)
-
 
 def create_database(database, host, user, password='', port=None, use_ssl=False):
     with connect(host, user, password, None, port, None, use_ssl) as conn:
         conn._rollback()
         conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         conn._process_messages(None)
-
 
 def drop_database(database, host, user, password='', port=None, use_ssl=False):
     with connect(host, user, password, None, port, None, use_ssl) as conn:
