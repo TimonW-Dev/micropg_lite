@@ -111,8 +111,7 @@ class Connection:
                     pass  # trust
                 elif auth_method == 10:  # SASL
                     assert b'SCRAM-SHA-256\x00\x00' in data
-                    printable = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/'
-                    client_nonce = ''.join(printable[random.getrandbits(6)] for _ in range(24))
+                    client_nonce = str(random.getrandbits(32))
                     client_first = f'n,,n=,r={client_nonce}'.encode('utf-8')
                     scram_msg = b'SCRAM-SHA-256\x00' + (len(client_first)).to_bytes(4, 'big') + client_first
                     self._write(b'p' + (len(scram_msg) + 4).to_bytes(4, 'big') + scram_msg)
