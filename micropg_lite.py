@@ -39,9 +39,6 @@ def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
     return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
 
-def _bytes_to_bint(b):
-    return int.from_bytes(b, 'big')
-
 def _bint_to_bytes(val):
     return val.to_bytes(4, 'big')
 
@@ -105,14 +102,14 @@ class Connection:
                 code = ord(self._read(1))
             except:
                 raise Exception(u"08003:Lost connection")
-            ln = _bytes_to_bint(self._read(4)) - 4
+            ln = int.from_bytes(self._read(4), 'big') - 4
             data = self._read(ln)
             if code == 90:
                 self._ready_for_query = data
                 break
-                
+
             elif code == 82:
-                auth_method = _bytes_to_bint(data[:4])
+                auth_method = int.from_bytes(data[:4], 'big')
                 if auth_method == 0:
                     pass  # trust
                 elif auth_method == 10:  # SASL
@@ -124,8 +121,8 @@ class Connection:
                     self._write(b'p' + _bint_to_bytes(len(scram_msg) + 4) + scram_msg)
 
                     assert ord(self._read(1)) == 82
-                    data = self._read(_bytes_to_bint(self._read(4)) - 4)
-                    assert _bytes_to_bint(data[:4]) == 11  # SCRAM first
+                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
+                    assert int.from_bytes(data[:4], 'big') == 11  # SCRAM first
 
                     server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
                     assert server['r'].startswith(client_nonce)
@@ -150,16 +147,16 @@ class Connection:
                     self._write(b'p' + _bint_to_bytes(len(client_final) + 4) + client_final)
 
                     assert ord(self._read(1)) == 82
-                    data = self._read(_bytes_to_bint(self._read(4)) - 4)
-                    assert _bytes_to_bint(data[:4]) == 12  # SCRAM final
+                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
+                    assert int.from_bytes(data[:4], 'big') == 12  # SCRAM final
 
                     assert ord(self._read(1)) == 82
-                    data = self._read(_bytes_to_bint(self._read(4)) - 4)
-                    assert _bytes_to_bint(data[:4]) == 0
-                    
+                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
+                    assert int.from_bytes(data[:4], 'big') == 0
+
                 else:
                     raise Exception(u"08003:Lost connection")
-            
+
             elif code == 83:
                 k, v, _ = data.split(b'\x00')
                 if k == b'server_encoding':
@@ -184,7 +181,7 @@ class Connection:
                     if parts and parts[-1].isdigit():
                         obj._rowcount = int(parts[-1])
             elif code == 84 and obj:
-                count = _bytes_to_bint(data[:2])
+                count = int.from_bytes(data[:2], 'big')
                 obj.description = [None] * count
                 n = 2
                 for i in range(count):
@@ -193,15 +190,15 @@ class Connection:
                     n = name_end + 1
                     try: name = name.decode(self.encoding)
                     except UnicodeDecodeError: pass
-                    type_code = _bytes_to_bint(data[n+6:n+10])
+                    type_code = int.from_bytes(data[n+6:n+10], 'big')
                     if type_code == 1043:
-                        size, precision, scale = _bytes_to_bint(data[n+12:n+16]) - 4, -1, -1
+                        size, precision, scale = int.from_bytes(data[n+12:n+16], 'big') - 4, -1, -1
                     elif type_code == 1700:
-                        size = _bytes_to_bint(data[n+10:n+12])
-                        precision = _bytes_to_bint(data[n+12:n+14])
-                        scale = precision - _bytes_to_bint(data[n+14:n+16])
+                        size = int.from_bytes(data[n+10:n+12], 'big')
+                        precision = int.from_bytes(data[n+12:n+14], 'big')
+                        scale = precision - int.from_bytes(data[n+14:n+16], 'big')
                     else:
-                        size, precision, scale = _bytes_to_bint(data[n+10:n+12]), -1, -1
+                        size, precision, scale = int.from_bytes(data[n+10:n+12], 'big'), -1, -1
                     obj.description[i] = (name, type_code, None, size, precision, scale, None)
                     n += 18
             elif code == 68 and obj:
@@ -211,7 +208,7 @@ class Connection:
                         row.append(None)
                         n += 4
                     else:
-                        ln = _bytes_to_bint(data[n:n+4])
+                        ln = int.from_bytes(data[n:n+4], 'big')
                         col_data = data[n+4:n+4+ln]
                         col_oid = obj.description[len(row)][1]
                         col_encoding = self.encoding
@@ -313,10 +310,10 @@ class Connection:
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
             self.begin()
-        
+
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self._process_messages(obj)
-        
+
         if self.autocommit:
             self.commit()
 
