@@ -47,7 +47,7 @@ class Cursor:
         self._rowcount = self.arraysize = 0
 
     def _check_connection(self):
-        if not self.connection or not self.connection.is_connect():
+        if not self.connection or not bool(self.connection.sock):
             raise Exception("08003:Lost connection")
 
     def execute(self, query, args=()):
@@ -296,9 +296,6 @@ class Connection:
         if t in (list, tuple):
             return 'ARRAY[' + ','.join([self.escape_parameter(e) for e in v]) + ']'
         return "'" + str(v) + "'"
-
-    def is_connect(self):
-        return bool(self.sock)
 
     def cursor(self):
         return Cursor(self)
