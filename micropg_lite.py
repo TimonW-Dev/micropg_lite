@@ -46,12 +46,9 @@ class Cursor:
         self._rows = []
         self._rowcount = self.arraysize = 0
 
-    def _check_connection(self):
+    def execute(self, query, args=()):
         if not self.connection or not bool(self.connection.sock):
             raise Exception("08003:Lost connection")
-
-    def execute(self, query, args=()):
-        self._check_connection()
         self.description, self._rows = [], []
         if args:
             query = query.replace('%', '%%').replace('%%s', '%s') % tuple(self.connection.escape_parameter(arg).replace('%', '%%') for arg in args)
