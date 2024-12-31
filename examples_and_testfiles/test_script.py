@@ -32,7 +32,8 @@ start_time = time.time()
 conn = micropg_lite.connect(host=db_host,
                     user=db_user,
                     password=db_password,
-                    database=db_database)
+                    database=db_database,
+                    use_ssl=True)
 cur = conn.cursor()
 
 successCount = 0
@@ -224,7 +225,7 @@ except Exception:
 print("\n---")
 
 if (successCount == 0):
-    print("All tests completed SUCCESSFULLY")
+    print("All tests completed SUCCESSFULLY and with SSL")
 else:
     print("!!! At least one test failed !!!")
 
