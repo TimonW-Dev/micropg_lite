@@ -54,7 +54,21 @@ class Cursor:
             raiseExceptionLostConnection()
         self.description, self._rows = [], []
         if args:
-            query = query.replace('%', '%%').replace('%%s', '%s') % tuple(self.connection.escape_parameter(arg).replace('%', '%%') for arg in args)
+            def escape_parameter(v):
+                if v is None:
+                    return 'NULL'
+                t = type(v)
+                if t == str:
+                    return "'" + v.replace("'", "''") + "'"
+                if t in (bytearray, bytes):
+                    return "'" + ''.join(['\\%03o' % c for c in v]) + "'::bytea"
+                if t == bool:
+                    return 'TRUE' if v else 'FALSE'
+                if t in (list, tuple):
+                    return 'ARRAY[' + ','.join([escape_parameter(e) for e in v]) + ']'
+                return "'" + str(v) + "'"
+
+            query = query.replace('%', '%%').replace('%%s', '%s') % tuple(escape_parameter(arg).replace('%', '%%') for arg in args)
             query = query.replace('%%', '%')
         self.connection.execute(query, self)
 
@@ -282,20 +296,6 @@ class Connection:
         v += b'\x00'
         self._write((len(v) + 4).to_bytes(4, 'big') + v)
         self._process_messages(None)
-
-    def escape_parameter(self, v):
-        if v is None:
-            return 'NULL'
-        t = type(v)
-        if t == str:
-            return "'" + v.replace("'", "''") + "'"
-        if t in (bytearray, bytes):
-            return "'" + ''.join(['\\%03o' % c for c in v]) + "'::bytea"
-        if t == bool:
-            return 'TRUE' if v else 'FALSE'
-        if t in (list, tuple):
-            return 'ARRAY[' + ','.join([self.escape_parameter(e) for e in v]) + ']'
-        return "'" + str(v) + "'"
 
     def cursor(self):
         return Cursor(self)
