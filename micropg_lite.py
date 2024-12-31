@@ -98,7 +98,7 @@ class Connection:
             try:
                 code = ord(self._read(1))
             except:
-                raise Exception(u"08003:Lost connection")
+                raiseExceptionLostConnection()
             ln = int.from_bytes(self._read(4), 'big') - 4
             data = self._read(ln)
             if code == 90:
@@ -151,7 +151,7 @@ class Connection:
                     assert int.from_bytes(data[:4], 'big') == 0
 
                 else:
-                    raise Exception(u"08003:Lost connection")
+                    raiseExceptionLostConnection()
 
             elif code == 83:
                 k, v, _ = data.split(b'\x00')
