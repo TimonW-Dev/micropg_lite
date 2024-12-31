@@ -39,6 +39,9 @@ def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
     return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
 
+def raiseExceptionLostConnection():
+    raise Exception("08003:Lost connection")
+
 class Cursor:
     def __init__(self, connection):
         self.connection = connection
@@ -48,7 +51,7 @@ class Cursor:
 
     def execute(self, query, args=()):
         if not self.connection or not bool(self.connection.sock):
-            raise Exception("08003:Lost connection")
+            raiseExceptionLostConnection()
         self.description, self._rows = [], []
         if args:
             query = query.replace('%', '%%').replace('%%s', '%s') % tuple(self.connection.escape_parameter(arg).replace('%', '%%') for arg in args)
@@ -223,7 +226,7 @@ class Connection:
                 obj._rows.append(tuple(row))
             elif code == 69:
                 print(code)
-                raise Exception("08003:Lost connection")
+                raiseExceptionLostConnection()
             elif code == 100:
                 obj.write(data)
             elif code == 71:
@@ -237,7 +240,7 @@ class Connection:
 
     def _read(self, ln):
         if not self.sock:
-            raise Exception("08003:Lost connection")
+            raiseExceptionLostConnection()
         r = bytearray(ln)
         pos = 0
         while pos < ln:
@@ -246,14 +249,14 @@ class Connection:
             else:
                 chunk = self.sock.recv(ln - pos)
             if not chunk:
-                raise Exception("08003:Lost connection")
+                raiseExceptionLostConnection()
             r[pos:pos+len(chunk)] = chunk
             pos += len(chunk)
         return bytes(r)
 
     def _write(self, b):
         if not self.sock:
-            raise Exception("08003:Lost connection")
+            raiseExceptionLostConnection()
         pos = 0
         while pos < len(b):
             if hasattr(self.sock, "write"):
@@ -272,7 +275,7 @@ class Connection:
             if self._read(1) == b'S':
                 self.sock = ssl.wrap_socket(self.sock)
             else:
-                raise Exception("08003:Lost connection")
+                raiseExceptionLostConnection()
         v = b'\x00\x03\x00\x00user\x00' + self.user.encode('ascii') + b'\x00'
         if self.database:
             v += b'database\x00' + self.database.encode('ascii') + b'\x00'
