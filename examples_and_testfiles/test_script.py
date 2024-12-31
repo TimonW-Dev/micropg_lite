@@ -159,6 +159,39 @@ else:
 
 print("---")
 
+### Autocommit test
+conn.set_autocommit(True)
+cur.execute("INSERT INTO customers (firstName, lastName, email, birthDate, specialNote, loyaltyPoints) VALUES ('Auto', 'Commit', 'auto.commit@test.com', '2000-01-01', 'Autocommit test', 0)")
+cur.execute('select count(Id) from customers')
+selectresult = cur.fetchall()
+if (selectresult[0][0] == 13):
+    print("AUTOCOMMIT ok")
+    cur.execute("DELETE FROM customers WHERE firstName = 'Auto' AND lastName = 'Commit'")
+else:
+    print("AUTOCOMMIT !!!failed!!!")
+    successCount = successCount + 1
+conn.set_autocommit(False)
+
+print("---")
+
+### Data types handling test
+cur.execute("CREATE TABLE data_types_test (char_col CHAR(1), int_col INT, float_col FLOAT, bool_col BOOLEAN, date_col DATE);")
+conn.commit()
+cur.execute("INSERT INTO data_types_test (char_col, int_col, float_col, bool_col, date_col) VALUES ('a', 1, 1.1, TRUE, '2024-12-31');")
+conn.commit()
+cur.execute("SELECT * FROM data_types_test;")
+selectresult = cur.fetchall()
+print(selectresult)
+if (selectresult == [('a', 1, 1.1, True, '2024-12-31')]):
+    print("DATA TYPES ok")
+else:
+    print("DATA TYPES !!!failed!!!")
+    successCount = successCount + 1
+cur.execute('DROP TABLE data_types_test;')
+conn.commit()
+
+print("---")
+
 ### Close connection - prepeare for next step
 conn.close()
 
