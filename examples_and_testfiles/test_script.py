@@ -201,14 +201,14 @@ try:
     micropg_lite.create_database(
         host=db_host, user=db_user, password=db_password, database='testDatabase'
     )
-    print("CREATE DATABASE ok")
+    print("CREATE DATABASE ok (without SSL)")
     print("---")
     
     try:
         micropg_lite.drop_database(
             host=db_host, user=db_user, password=db_password, database='testDatabase'
         )
-        print("DROP DATABASE ok")
+        print("DROP DATABASE ok (without SSL)")
         print("---")
 
     except Exception:
