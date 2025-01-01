@@ -47,7 +47,7 @@ class Cursor:
     def execute(self, q, a=()):
         if not self.connection or not bool(self.connection.sock): raiseExceptionLostConnection()
         self._rows = []
-        if a: q = q.replace('%', '%%').replace('%%s', '%s') % tuple(('NULL' if i is None else "'" + i.replace("'", "''") + "'" if isinstance(i, str) else "'" + ''.join(['\\%03o' % c for c in i]) + "'::bytea" if isinstance(i, (bytearray, bytes)) else ('TRUE' if i else 'FALSE') if isinstance(i, bool) else str(i)).replace('%', '%%') for i in a); q = q.replace('%%', '%')
+        if a: q = q.replace('%', '%%').replace('%%s', '%s') % tuple(('NULL' if i is None else "'" + i.replace("'", "''") + "'" if isinstance(i, str) else "'" + ''.join(['\\%03o' % c for c in i]) + "'" for i in a))
         self.connection.execute(q, self)
 
     def fetchall(self):
