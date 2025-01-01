@@ -82,7 +82,20 @@ class Connection:
         self.autocommit = False
         self.server_version = ''
         self._ready_for_query = b'I'
-        self._open()
+        
+        # Inlined _open() function
+        self.sock = socket.socket()
+        self.sock.connect(socket.getaddrinfo(self.host, self.port)[0][-1])
+        if self.timeout: self.sock.settimeout(float(self.timeout))
+        if self.use_ssl:
+            self._write((8).to_bytes(4, 'big') + (80877103).to_bytes(4, 'big'))
+            if self._read(1) == b'S': self.sock = ssl.wrap_socket(self.sock)
+            else: raiseExceptionLostConnection()
+        v = b'\x00\x03\x00\x00user\x00' + self.user.encode('ascii') + b'\x00'
+        if self.database: v += b'database\x00' + self.database.encode('ascii') + b'\x00'
+        v += b'\x00'
+        self._write((len(v) + 4).to_bytes(4, 'big') + v)
+        self._process_messages(None)
 
     def __enter__(self):
         return self
@@ -214,20 +227,6 @@ class Connection:
         pos = 0
         while pos < len(b):
             pos += self.sock.write(b[pos:]) if hasattr(self.sock, "write") else self.sock.send(b[pos:])
-            
-    def _open(self):
-        self.sock = socket.socket()
-        self.sock.connect(socket.getaddrinfo(self.host, self.port)[0][-1])
-        if self.timeout: self.sock.settimeout(float(self.timeout))
-        if self.use_ssl:
-            self._write((8).to_bytes(4, 'big') + (80877103).to_bytes(4, 'big'))
-            if self._read(1) == b'S': self.sock = ssl.wrap_socket(self.sock)
-            else: raiseExceptionLostConnection()
-        v = b'\x00\x03\x00\x00user\x00' + self.user.encode('ascii') + b'\x00'
-        if self.database: v += b'database\x00' + self.database.encode('ascii') + b'\x00'
-        v += b'\x00'
-        self._write((len(v) + 4).to_bytes(4, 'big') + v)
-        self._process_messages(None)
 
     def cursor(self):
         return Cursor(self)
