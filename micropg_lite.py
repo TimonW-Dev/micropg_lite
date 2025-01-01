@@ -49,19 +49,11 @@ class Cursor:
         self._rows = []
         self._rowcount = self.arraysize = 0
         
-    def execute(self, query, args=()):
-        if not self.connection or not bool(self.connection.sock):
-            raiseExceptionLostConnection()
+    def execute(self, q, a=()):
+        if not self.connection or not bool(self.connection.sock): raiseExceptionLostConnection()
         self.description, self._rows = [], []
-        if args:
-            query = query.replace('%', '%%').replace('%%s', '%s') % tuple(
-                ('NULL' if arg is None else "'" + arg.replace("'", "''") + "'" if isinstance(arg, str) 
-                 else "'" + ''.join(['\\%03o' % c for c in arg]) + "'::bytea" if isinstance(arg, (bytearray, bytes)) 
-                 else ('TRUE' if arg else 'FALSE') if isinstance(arg, bool) 
-                 else str(arg)).replace('%', '%%') for arg in args
-            )
-            query = query.replace('%%', '%')
-        self.connection.execute(query, self)
+        if a: q = q.replace('%', '%%').replace('%%s', '%s') % tuple(('NULL' if i is None else "'" + i.replace("'", "''") + "'" if isinstance(i, str) else "'" + ''.join(['\\%03o' % c for c in i]) + "'::bytea" if isinstance(i, (bytearray, bytes)) else ('TRUE' if i else 'FALSE') if isinstance(i, bool) else str(i)).replace('%', '%%') for i in a); q = q.replace('%%', '%')
+        self.connection.execute(q, self)
 
     def fetchall(self):
         rows = self._rows
