@@ -27,11 +27,7 @@
 # micropg (https://github.com/nakagami/micropg) a minipg (https://github.com/nakagami/minipg) subset.
 ##############################################################################
 
-import ssl
-import hashlib
-import socket
-import binascii
-import random
+import ssl, hashlib, socket, binascii, random
 
 # -----------------------------------------------------------------------------
 
