@@ -104,8 +104,7 @@ class Connection:
         while True:
             try: code = ord(self._read(1))
             except: raiseExceptionLostConnection()
-            ln = int.from_bytes(self._read(4), 'big') - 4
-            data = self._read(ln)
+            data = self._read(int.from_bytes(self._read(4), 'big') - 4)
             if code == 90: self._ready_for_query = data; break
             elif code == 82:
                 auth_method = int.from_bytes(data[:4], 'big')
