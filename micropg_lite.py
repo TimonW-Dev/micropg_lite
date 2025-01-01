@@ -45,13 +45,12 @@ def raiseExceptionLostConnection():
 class Cursor:
     def __init__(self, connection):
         self.connection = connection
-        self.description = []
         self._rows = []
         self._rowcount = self.arraysize = 0
         
     def execute(self, q, a=()):
         if not self.connection or not bool(self.connection.sock): raiseExceptionLostConnection()
-        self.description, self._rows = [], []
+        self._rows = []
         if a: q = q.replace('%', '%%').replace('%%s', '%s') % tuple(('NULL' if i is None else "'" + i.replace("'", "''") + "'" if isinstance(i, str) else "'" + ''.join(['\\%03o' % c for c in i]) + "'::bytea" if isinstance(i, (bytearray, bytes)) else ('TRUE' if i else 'FALSE') if isinstance(i, bool) else str(i)).replace('%', '%%') for i in a); q = q.replace('%%', '%')
         self.connection.execute(q, self)
 
