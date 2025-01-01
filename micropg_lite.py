@@ -52,29 +52,14 @@ class Cursor:
     def execute(self, query, args=()):
         if not self.connection or not bool(self.connection.sock):
             raiseExceptionLostConnection()
-
         self.description, self._rows = [], []
-
         if args:
             def escape_parameter(v):
                 t = type(v)
-                return (
-                    'NULL' if v is None else
-                    "'" + v.replace("'", "''") + "'" if t == str else
-                    "'" + ''.join(['\\%03o' % c for c in v]) + "'::bytea" if t in (bytearray, bytes) else
-                    ('TRUE' if v else 'FALSE') if t == bool else
-                    'ARRAY[' + ','.join(map(escape_parameter, v)) + ']' if t in (list, tuple) else
-                    "'" + str(v) + "'"
-                )
-
-            query = query.replace('%', '%%').replace(
-                '%%s', '%s') % tuple(
-                    escape_parameter(arg).replace('%', '%%') for arg in args
-                )
+                return ('NULL' if v is None else "'" + v.replace("'", "''") + "'" if t == str else "'" + ''.join(['\\%03o' % c for c in v]) + "'::bytea" if t in (bytearray, bytes) else ('TRUE' if v else 'FALSE') if t == bool else 'ARRAY[' + ','.join(map(escape_parameter, v)) + ']' if t in (list, tuple) else "'" + str(v) + "'")
+            query = query.replace('%', '%%').replace('%%s', '%s') % tuple(escape_parameter(arg).replace('%', '%%') for arg in args)
             query = query.replace('%%', '%')
-
         self.connection.execute(query, self)
-
 
     def executemany(self, query, seq_of_params):
         self._rowcount = sum(self.execute(query, params)._rowcount for params in seq_of_params)
