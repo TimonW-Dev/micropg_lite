@@ -213,12 +213,8 @@ class Connection:
             raiseExceptionLostConnection()
         pos = 0
         while pos < len(b):
-            if hasattr(self.sock, "write"):
-                sent = self.sock.write(b[pos:])
-            else:
-                sent = self.sock.send(b[pos:])
-            pos += sent
-
+            pos += self.sock.write(b[pos:]) if hasattr(self.sock, "write") else self.sock.send(b[pos:])
+            
     def _open(self):
         self.sock = socket.socket()
         self.sock.connect(socket.getaddrinfo(self.host, self.port)[0][-1])
