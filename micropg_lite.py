@@ -104,7 +104,6 @@ class Connection:
                 auth_method = int.from_bytes(data[:4], 'big')
                 if auth_method == 0: pass
                 elif auth_method == 10:
-                    assert b'SCRAM-SHA-256\x00\x00' in data
                     nonce = str(random.getrandbits(32))
                     first = f'n,,n=,r={nonce}'.encode('utf-8')
                     msg = b'SCRAM-SHA-256\x00' + (len(first)).to_bytes(4, 'big') + first
