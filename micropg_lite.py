@@ -98,87 +98,59 @@ class Connection:
 
     def _process_messages(self, obj):
         while True:
-            try:
-                code = ord(self._read(1))
-            except:
-                raiseExceptionLostConnection()
+            try: code = ord(self._read(1))
+            except: raiseExceptionLostConnection()
             ln = int.from_bytes(self._read(4), 'big') - 4
             data = self._read(ln)
-            if code == 90:
-                self._ready_for_query = data
-                break
-
+            if code == 90: self._ready_for_query = data; break
             elif code == 82:
                 auth_method = int.from_bytes(data[:4], 'big')
-                if auth_method == 0:
-                    pass  # trust
-                elif auth_method == 10:  # SASL
+                if auth_method == 0: pass
+                elif auth_method == 10:
                     assert b'SCRAM-SHA-256\x00\x00' in data
-                    client_nonce = str(random.getrandbits(32))
-                    client_first = f'n,,n=,r={client_nonce}'.encode('utf-8')
-                    scram_msg = b'SCRAM-SHA-256\x00' + (len(client_first)).to_bytes(4, 'big') + client_first
-                    self._write(b'p' + (len(scram_msg) + 4).to_bytes(4, 'big') + scram_msg)
-
+                    nonce = str(random.getrandbits(32))
+                    first = f'n,,n=,r={nonce}'.encode('utf-8')
+                    msg = b'SCRAM-SHA-256\x00' + (len(first)).to_bytes(4, 'big') + first
+                    self._write(b'p' + (len(msg) + 4).to_bytes(4, 'big') + msg)
                     assert ord(self._read(1)) == 82
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    assert int.from_bytes(data[:4], 'big') == 11  # SCRAM first
-
+                    assert int.from_bytes(data[:4], 'big') == 11
                     server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
-                    assert server['r'].startswith(client_nonce)
-
-                    # Inlined pbkdf2_hmac_sha256 logic
-                    password_bytes = self.password.encode('utf-8')
+                    assert server['r'].startswith(nonce)
+                    pw_bytes = self.password.encode('utf-8')
                     salt = binascii.a2b_base64(server['s'])
-                    iterations = int(server['i'])
-
-                    u1 = hmac_sha256_digest(password_bytes, salt + b'\x00\x00\x00\x01')
+                    iters = int(server['i'])
+                    u1 = hmac_sha256_digest(pw_bytes, salt + b'\x00\x00\x00\x01')
                     ui = int.from_bytes(u1, 'big')
-                    for _ in range(iterations - 1):
-                        u1 = hmac_sha256_digest(password_bytes, u1)
-                        ui ^= int.from_bytes(u1, 'big')
+                    for _ in range(iters - 1): u1 = hmac_sha256_digest(pw_bytes, u1); ui ^= int.from_bytes(u1, 'big')
                     salt_pass = ui.to_bytes(32, 'big')
-
                     client_key = hmac_sha256_digest(salt_pass, b"Client Key")
-
-                    auth_msg = f"n=,r={client_nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
+                    auth_msg = f"n=,r={nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
                     proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
-                    client_final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
-                    self._write(b'p' + (len(client_final) + 4).to_bytes(4, 'big') + client_final)
-
+                    final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
+                    self._write(b'p' + (len(final) + 4).to_bytes(4, 'big') + final)
                     assert ord(self._read(1)) == 82
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    assert int.from_bytes(data[:4], 'big') == 12  # SCRAM final
-
+                    assert int.from_bytes(data[:4], 'big') == 12
                     assert ord(self._read(1)) == 82
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
                     assert int.from_bytes(data[:4], 'big') == 0
-
-                else:
-                    raiseExceptionLostConnection()
-
+                else: raiseExceptionLostConnection()
             elif code == 83:
                 k, v, _ = data.split(b'\x00')
-                if k == b'server_encoding':
-                    self.encoding = v.decode('ascii')
+                if k == b'server_encoding': self.encoding = v.decode('ascii')
                 elif k == b'server_version':
                     ver = v.decode('ascii').split('(')[0].split('.')
                     self.server_version = int(ver[0]) * 10000
-                    try:
-                        self.server_version += int(ver[1]) * 100
-                        if len(ver) > 2:
-                            self.server_version += int(ver[2])
-                    except (IndexError, ValueError):
-                        pass
-                elif k == b'TimeZone':
-                    self.tz_name = v.decode('ascii')
+                    try: self.server_version += int(ver[1]) * 100
+                    except: pass
+                elif k == b'TimeZone': self.tz_name = v.decode('ascii')
             elif code == 67 and obj:
                 cmd = data[:-1].decode('ascii')
-                if cmd == 'SHOW':
-                    obj._rowcount = 1
+                if cmd == 'SHOW': obj._rowcount = 1
                 else:
                     parts = cmd.split()
-                    if parts and parts[-1].isdigit():
-                        obj._rowcount = int(parts[-1])
+                    if parts and parts[-1].isdigit(): obj._rowcount = int(parts[-1])
             elif code == 84 and obj:
                 count = int.from_bytes(data[:2], 'big')
                 obj.description = [None] * count
@@ -188,59 +160,42 @@ class Connection:
                     name = data[n:name_end]
                     n = name_end + 1
                     try: name = name.decode(self.encoding)
-                    except UnicodeDecodeError: pass
+                    except: pass
                     type_code = int.from_bytes(data[n+6:n+10], 'big')
-                    if type_code == 1043:
-                        size, precision, scale = int.from_bytes(data[n+12:n+16], 'big') - 4, -1, -1
+                    if type_code == 1043: size, precision, scale = int.from_bytes(data[n+12:n+16], 'big') - 4, -1, -1
                     elif type_code == 1700:
                         size = int.from_bytes(data[n+10:n+12], 'big')
                         precision = int.from_bytes(data[n+12:n+14], 'big')
                         scale = precision - int.from_bytes(data[n+14:n+16], 'big')
-                    else:
-                        size, precision, scale = int.from_bytes(data[n+10:n+12], 'big'), -1, -1
+                    else: size, precision, scale = int.from_bytes(data[n+10:n+12], 'big'), -1, -1
                     obj.description[i] = (name, type_code, None, size, precision, scale, None)
                     n += 18
             elif code == 68 and obj:
                 n, row = 2, []
                 while n < len(data):
-                    if data[n:n+4] == b'\xff\xff\xff\xff':
-                        row.append(None)
-                        n += 4
+                    if data[n:n+4] == b'\xff\xff\xff\xff': row.append(None); n += 4
                     else:
                         ln = int.from_bytes(data[n:n+4], 'big')
                         col_data = data[n+4:n+4+ln]
                         col_oid = obj.description[len(row)][1]
                         col_encoding = self.encoding
-
-                        # Inline _decode_column logic
-                        if col_data is None:
-                            decoded_data = None
-                        else:
-                            decoded_data = col_data.decode(col_encoding)
-                            if col_oid == 16:
-                                decoded_data = (decoded_data == 't')
-                            elif col_oid in (21, 23, 20, 26):
-                                decoded_data = int(decoded_data)
-                            elif col_oid in (700, 701):
-                                decoded_data = float(decoded_data)
-
+                        decoded_data = col_data.decode(col_encoding) if col_data else None
+                        if col_oid == 16: decoded_data = (decoded_data == 't')
+                        elif col_oid in (21, 23, 20, 26): decoded_data = int(decoded_data)
+                        elif col_oid in (700, 701): decoded_data = float(decoded_data)
                         row.append(decoded_data)
                         n += ln + 4
                 obj._rows.append(tuple(row))
-            elif code == 69:
-                print(code)
-                raiseExceptionLostConnection()
-            elif code == 100:
-                obj.write(data)
+            elif code == 69: print(code); raiseExceptionLostConnection()
+            elif code == 100: obj.write(data)
             elif code == 71:
                 print(code)
                 while True:
                     buf = obj.read(8192)
-                    if not buf:
-                        break
+                    if not buf: break
                     self._write(b'd' + (len(buf) + 4).to_bytes(4, 'big') + buf)
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
-
+                
     def _read(self, ln):
         if not self.sock:
             raiseExceptionLostConnection()
