@@ -31,17 +31,19 @@ import ssl, hashlib, socket, binascii, random
 
 # -----------------------------------------------------------------------------
 
+def raiseExceptionLostConnection():
+    raise Exception("08003:Lost connection")
+
+def connect(host, user, password='', database=None, port=None, use_ssl=False):
+    return Connection(user, password, database, host, port if port else 5432, use_ssl)
+
 def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
     return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
 
-def raiseExceptionLostConnection():
-    raise Exception("08003:Lost connection")
-
 class Cursor:
     def __init__(self, connection):
         self.connection = connection
-        self._rowcount = self.arraysize = 0
         
     def execute(self, q, a=()):
         if not self.connection or not bool(self.connection.sock): raiseExceptionLostConnection()
@@ -81,12 +83,6 @@ class Connection:
         v += b'\x00'
         self._write((len(v) + 4).to_bytes(4, 'big') + v)
         self._process_messages(None)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc, value, traceback):
-        self.close()
 
     def _send_message(self, message, data):
         self._write(b''.join([message, (len(data) + 4).to_bytes(4, 'big'), data, b'H\x00\x00\x00\x04']))
@@ -250,6 +246,3 @@ class Connection:
 
     def drop_database(self, database):
         self._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-
-def connect(host, user, password='', database=None, port=None, use_ssl=False):
-    return Connection(user, password, database, host, port if port else 5432, use_ssl)
