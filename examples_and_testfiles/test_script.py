@@ -197,17 +197,15 @@ print("---")
 conn.close()
 
 ### CREATE & DROP DATABASE test
+# Create a new connection
+conn = micropg_lite.connect(host=db_host, user=db_user, password=db_password, use_ssl=False)
 try:
-    micropg_lite.create_database(
-        host=db_host, user=db_user, password=db_password, database='testDatabase'
-    )
+    conn.create_database('testDatabase')
     print("CREATE DATABASE ok (without SSL)")
     print("---")
     
     try:
-        micropg_lite.drop_database(
-            host=db_host, user=db_user, password=db_password, database='testDatabase'
-        )
+        conn.drop_database('testDatabase')
         print("DROP DATABASE ok (without SSL)")
         print("---")
 
