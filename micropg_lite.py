@@ -204,9 +204,6 @@ class Connection:
         if self.autocommit:
             self.commit()
 
-    def set_autocommit(self, autocommit):
-        self.autocommit = autocommit
-
     def _begin(self):
         self._send_message(b'Q', b"BEGIN\x00")
         self._process_messages(None)
