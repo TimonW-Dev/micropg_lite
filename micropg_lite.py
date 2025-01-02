@@ -2,7 +2,7 @@
 # The MIT License (MIT)
 #
 # Copyright (c) 2014-2019, 2021-2024 Hajime Nakagami (micropg)
-# Copyright (c) 2023-2024 TimonW-Dev, BetaFloof, MikeRoth93 (micropg_lite based on micropg)
+# Copyright (c) 2023-2025 TimonW-Dev, BetaFloof, MikeRoth93 (micropg_lite based on micropg)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,6 @@ import ssl, hashlib, socket, binascii, random
 
 def raiseExceptionLostConnection():
     raise Exception("08003:Lost connection")
-
-def connect(host, user, password='', database=None, port=None, use_ssl=False):
-    return Connection(user, password, database, host, port if port else 5432, use_ssl)
 
 def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
@@ -246,3 +243,6 @@ class Connection:
 
     def drop_database(self, database):
         self._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
+        
+def connect(host, user, password='', database=None, port=None, use_ssl=False):
+    return Connection(user, password, database, host, port if port else 5432, use_ssl)
