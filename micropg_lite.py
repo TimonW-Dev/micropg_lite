@@ -115,13 +115,11 @@ class Connection:
                     server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
                     assert server['r'].startswith(nonce)
                     pw_bytes = self.password.encode('utf-8')
-                    salt = binascii.a2b_base64(server['s'])
                     iters = int(server['i'])
-                    u1 = hmac_sha256_digest(pw_bytes, salt + b'\x00\x00\x00\x01')
+                    u1 = hmac_sha256_digest(pw_bytes, binascii.a2b_base64(server['s']) + b'\x00\x00\x00\x01')
                     ui = int.from_bytes(u1, 'big')
                     for _ in range(iters - 1): u1 = hmac_sha256_digest(pw_bytes, u1); ui ^= int.from_bytes(u1, 'big')
-                    salt_pass = ui.to_bytes(32, 'big')
-                    client_key = hmac_sha256_digest(salt_pass, b"Client Key")
+                    client_key = hmac_sha256_digest(ui.to_bytes(32, 'big'), b"Client Key")
                     auth_msg = f"n=,r={nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
                     proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
                     final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
@@ -183,10 +181,9 @@ class Connection:
                         row.append(decoded_data)
                         n += ln + 4
                 obj._rows.append(tuple(row))
-            elif code == 69: print(code); raiseExceptionLostConnection()
+            elif code == 69: raiseExceptionLostConnection()
             elif code == 100: obj.write(data)
             elif code == 71:
-                print(code)
                 while True:
                     buf = obj.read(8192)
                     if not buf: break
