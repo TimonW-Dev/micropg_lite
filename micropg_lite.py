@@ -110,18 +110,18 @@ class Connection:
                     iters = int(server['i'])
                     u1 = hmac_sha256_digest(pw_bytes, binascii.a2b_base64(server['s']) + b'\x00\x00\x00\x01')
                     ui = int.from_bytes(u1, 'big')
-                    for _ in range(iters - 1): u1 = hmac_sha256_digest(pw_bytes, u1); ui ^= int.from_bytes(u1, 'big')
+                    for _ in range(iters - 1):
+                        u1 = hmac_sha256_digest(pw_bytes, u1)
+                        ui ^= int.from_bytes(u1, 'big') 
                     client_key = hmac_sha256_digest(ui.to_bytes(32, 'big'), b"Client Key")
                     auth_msg = f"n=,r={nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
                     proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
                     final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
                     self._write(b'p' + (len(final) + 4).to_bytes(4, 'big') + final)
-                    assert ord(self._read(1)) == 82
-                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    assert int.from_bytes(data[:4], 'big') == 12
-                    assert ord(self._read(1)) == 82
-                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    assert int.from_bytes(data[:4], 'big') == 0
+                    for _ in range(3):
+                        assert ord(self._read(1)) == 82
+                        data = self._read(int.from_bytes(self._read(4), 'big') - 4)
+                        if int.from_bytes(data[:4], 'big') == 0: break
                 else: raiseExceptionLostConnection()
             elif code == 67 and obj:
                 cmd = data[:-1].decode('ascii')
