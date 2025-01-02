@@ -2,7 +2,7 @@
 # The MIT License (MIT)
 #
 # Copyright (c) 2014-2019, 2021-2024 Hajime Nakagami (micropg)
-# Copyright (c) 2023-2024 TimonW-Dev, BetaFloof (micropg_lite based on micropg)
+# Copyright (c) 2023-2025 TimonW-Dev, BetaFloof, MikeRoth93 (micropg_lite based on micropg)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,18 +31,16 @@ import ssl, hashlib, socket, binascii, random
 
 # -----------------------------------------------------------------------------
 
+def raiseExceptionLostConnection():
+    raise Exception("08003:Lost connection")
+
 def hmac_sha256_digest(key, msg):
     pad_key = key + b'\x00' * (64 - len(key) % 64)
     return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
 
-def raiseExceptionLostConnection():
-    raise Exception("08003:Lost connection")
-
 class Cursor:
     def __init__(self, connection):
         self.connection = connection
-        self._rows = []
-        self._rowcount = self.arraysize = 0
         
     def execute(self, q, a=()):
         if not self.connection or not bool(self.connection.sock): raiseExceptionLostConnection()
@@ -59,23 +57,20 @@ class Cursor:
         self.connection = None
 
 class Connection:
-    def __init__(self, user, password, database, host, port, timeout, use_ssl):
+    def __init__(self, user, password, database, host, port, use_ssl):
         self.user = user
         self.password = password
         self.database = database
         self.host = host
         self.port = port
-        self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
-        self.server_version = ''
         self._ready_for_query = b'I'
         
         # Inlined _open() function
         self.sock = socket.socket()
         self.sock.connect(socket.getaddrinfo(self.host, self.port)[0][-1])
-        if self.timeout: self.sock.settimeout(float(self.timeout))
         if self.use_ssl:
             self._write((8).to_bytes(4, 'big') + (80877103).to_bytes(4, 'big'))
             if self._read(1) == b'S': self.sock = ssl.wrap_socket(self.sock)
@@ -85,12 +80,6 @@ class Connection:
         v += b'\x00'
         self._write((len(v) + 4).to_bytes(4, 'big') + v)
         self._process_messages(None)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc, value, traceback):
-        self.close()
 
     def _send_message(self, message, data):
         self._write(b''.join([message, (len(data) + 4).to_bytes(4, 'big'), data, b'H\x00\x00\x00\x04']))
@@ -115,33 +104,22 @@ class Connection:
                     server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
                     assert server['r'].startswith(nonce)
                     pw_bytes = self.password.encode('utf-8')
-                    salt = binascii.a2b_base64(server['s'])
                     iters = int(server['i'])
-                    u1 = hmac_sha256_digest(pw_bytes, salt + b'\x00\x00\x00\x01')
+                    u1 = hmac_sha256_digest(pw_bytes, binascii.a2b_base64(server['s']) + b'\x00\x00\x00\x01')
                     ui = int.from_bytes(u1, 'big')
-                    for _ in range(iters - 1): u1 = hmac_sha256_digest(pw_bytes, u1); ui ^= int.from_bytes(u1, 'big')
-                    salt_pass = ui.to_bytes(32, 'big')
-                    client_key = hmac_sha256_digest(salt_pass, b"Client Key")
+                    for _ in range(iters - 1):
+                        u1 = hmac_sha256_digest(pw_bytes, u1)
+                        ui ^= int.from_bytes(u1, 'big') 
+                    client_key = hmac_sha256_digest(ui.to_bytes(32, 'big'), b"Client Key")
                     auth_msg = f"n=,r={nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
                     proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
                     final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
                     self._write(b'p' + (len(final) + 4).to_bytes(4, 'big') + final)
-                    assert ord(self._read(1)) == 82
-                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    assert int.from_bytes(data[:4], 'big') == 12
-                    assert ord(self._read(1)) == 82
-                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    assert int.from_bytes(data[:4], 'big') == 0
+                    for _ in range(3):
+                        assert ord(self._read(1)) == 82
+                        data = self._read(int.from_bytes(self._read(4), 'big') - 4)
+                        if int.from_bytes(data[:4], 'big') == 0: break
                 else: raiseExceptionLostConnection()
-            elif code == 83:
-                k, v, _ = data.split(b'\x00')
-                if k == b'server_encoding': self.encoding = v.decode('ascii')
-                elif k == b'server_version':
-                    ver = v.decode('ascii').split('(')[0].split('.')
-                    self.server_version = int(ver[0]) * 10000
-                    try: self.server_version += int(ver[1]) * 100
-                    except: pass
-                elif k == b'TimeZone': self.tz_name = v.decode('ascii')
             elif code == 67 and obj:
                 cmd = data[:-1].decode('ascii')
                 if cmd == 'SHOW': obj._rowcount = 1
@@ -183,10 +161,9 @@ class Connection:
                         row.append(decoded_data)
                         n += ln + 4
                 obj._rows.append(tuple(row))
-            elif code == 69: print(code); raiseExceptionLostConnection()
+            elif code == 69: raiseExceptionLostConnection()
             elif code == 100: obj.write(data)
             elif code == 71:
-                print(code)
                 while True:
                     buf = obj.read(8192)
                     if not buf: break
@@ -222,10 +199,8 @@ class Connection:
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
             self.begin()
-
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self._process_messages(obj)
-
         if self.autocommit:
             self.commit()
 
@@ -262,18 +237,12 @@ class Connection:
             self._write(b'X\x00\x00\x00\x04')
             self.sock.close()
             self.sock = None
+            
+    def create_database(self, database):
+        self._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
 
-def connect(host, user, password='', database=None, port=None, timeout=None, use_ssl=False):
-    return Connection(user, password, database, host, port if port else 5432, timeout, use_ssl)
-
-def create_database(database, host, user, password='', port=None, use_ssl=False):
-    with connect(host, user, password, None, port, None, use_ssl) as conn:
-        conn._rollback()
-        conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-        conn._process_messages(None)
-
-def drop_database(database, host, user, password='', port=None, use_ssl=False):
-    with connect(host, user, password, None, port, None, use_ssl) as conn:
-        conn._rollback()
-        conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-        conn._process_messages(None)
+    def drop_database(self, database):
+        self._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
+        
+def connect(host, user, password='', database=None, port=None, use_ssl=False):
+    return Connection(user, password, database, host, port if port else 5432, use_ssl)
