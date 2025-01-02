@@ -161,7 +161,7 @@ else:
 print("---")
 
 ### Autocommit test
-conn.set_autocommit(True)
+conn.autocommit = True
 cur.execute("INSERT INTO customers (firstName, lastName, email, birthDate, specialNote, loyaltyPoints) VALUES ('Auto', 'Commit', 'auto.commit@test.com', '2000-01-01', 'Autocommit test', 0)")
 cur.execute('select count(Id) from customers')
 selectresult = cur.fetchall()
@@ -171,7 +171,7 @@ if (selectresult[0][0] == 13):
 else:
     print("AUTOCOMMIT !!!failed!!!")
     successCount = successCount + 1
-conn.set_autocommit(False)
+conn.autocommit = False
 
 print("---")
 

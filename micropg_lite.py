@@ -198,23 +198,17 @@ class Connection:
 
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
-            self.begin()
+            self._begin()
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self._process_messages(obj)
         if self.autocommit:
             self.commit()
 
-    def set_autocommit(self, autocommit):
-        self.autocommit = autocommit
-
     def _begin(self):
-        self._send_message(b'Q', b"BEGIN\x00")
-        self._process_messages(None)
-
-    def begin(self):
         if self._ready_for_query == b'E':
             self._rollback()
-        self._begin()
+        self._send_message(b'Q', b"BEGIN\x00")
+        self._process_messages(None)
 
     def commit(self):
         if self.sock:
@@ -229,7 +223,7 @@ class Connection:
 
     def rollback(self):
         self._rollback()
-        self.begin()
+        self._begin()
 
     def close(self):
         if self.sock:
@@ -237,15 +231,15 @@ class Connection:
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password='', database=None, port=None, use_ssl=False):
-    return Connection(user, password, database, host, port if port else 5432, use_ssl)
+def connect(host, user, password='', database=None, port=5432, use_ssl=False):
+    return Connection(user, password, database, host, port, use_ssl)
 
-def create_database(host, user, password='', database=None, port=None, use_ssl=False):
+def create_database(host, user, password='', database=None, port=5432, use_ssl=False):
     conn = connect(host, user, password, None, port, use_ssl)
     conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.close()
 
-def drop_database(host, user, password='', database=None, port=None, use_ssl=False):
+def drop_database(host, user, password='', database=None, port=5432, use_ssl=False):
     conn = connect(host, user, password, None, port, use_ssl)
     conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.close()
