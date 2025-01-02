@@ -233,16 +233,19 @@ class Connection:
 
     def close(self):
         if self.sock:
-            # send Terminate
             self._write(b'X\x00\x00\x00\x04')
             self.sock.close()
             self.sock = None
-            
-    def create_database(self, database):
-        self._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
 
-    def drop_database(self, database):
-        self._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-        
 def connect(host, user, password='', database=None, port=None, use_ssl=False):
     return Connection(user, password, database, host, port if port else 5432, use_ssl)
+
+def create_database(host, user, password='', database=None, port=None, use_ssl=False):
+    conn = connect(host, user, password, None, port, use_ssl)
+    conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
+    conn.close()
+
+def drop_database(host, user, password='', database=None, port=None, use_ssl=False):
+    conn = connect(host, user, password, None, port, use_ssl)
+    conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
+    conn.close()
