@@ -131,15 +131,6 @@ class Connection:
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
                     assert int.from_bytes(data[:4], 'big') == 0
                 else: raiseExceptionLostConnection()
-            elif code == 83:
-                k, v, _ = data.split(b'\x00')
-                if k == b'server_encoding': self.encoding = v.decode('ascii')
-                elif k == b'server_version':
-                    ver = v.decode('ascii').split('(')[0].split('.')
-                    self.server_version = int(ver[0]) * 10000
-                    try: self.server_version += int(ver[1]) * 100
-                    except: pass
-                elif k == b'TimeZone': self.tz_name = v.decode('ascii')
             elif code == 67 and obj:
                 cmd = data[:-1].decode('ascii')
                 if cmd == 'SHOW': obj._rowcount = 1
