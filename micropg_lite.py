@@ -2,7 +2,7 @@
 # The MIT License (MIT)
 #
 # Copyright (c) 2014-2019, 2021-2024 Hajime Nakagami (micropg)
-# Copyright (c) 2023-2024 TimonW-Dev, BetaFloof (micropg_lite based on micropg)
+# Copyright (c) 2023-2024 TimonW-Dev, BetaFloof, MikeRoth93 (micropg_lite based on micropg)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,6 @@ def raiseExceptionLostConnection():
 class Cursor:
     def __init__(self, connection):
         self.connection = connection
-        self._rows = []
         self._rowcount = self.arraysize = 0
         
     def execute(self, q, a=()):
@@ -59,23 +58,20 @@ class Cursor:
         self.connection = None
 
 class Connection:
-    def __init__(self, user, password, database, host, port, timeout, use_ssl):
+    def __init__(self, user, password, database, host, port, use_ssl):
         self.user = user
         self.password = password
         self.database = database
         self.host = host
         self.port = port
-        self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
-        self.server_version = ''
         self._ready_for_query = b'I'
         
         # Inlined _open() function
         self.sock = socket.socket()
         self.sock.connect(socket.getaddrinfo(self.host, self.port)[0][-1])
-        if self.timeout: self.sock.settimeout(float(self.timeout))
         if self.use_ssl:
             self._write((8).to_bytes(4, 'big') + (80877103).to_bytes(4, 'big'))
             if self._read(1) == b'S': self.sock = ssl.wrap_socket(self.sock)
@@ -210,10 +206,8 @@ class Connection:
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
             self.begin()
-
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self._process_messages(obj)
-
         if self.autocommit:
             self.commit()
 
@@ -251,17 +245,13 @@ class Connection:
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password='', database=None, port=None, timeout=None, use_ssl=False):
-    return Connection(user, password, database, host, port if port else 5432, timeout, use_ssl)
+def connect(host, user, password='', database=None, port=None, use_ssl=False):
+    return Connection(user, password, database, host, port if port else 5432, use_ssl)
 
 def create_database(database, host, user, password='', port=None, use_ssl=False):
-    with connect(host, user, password, None, port, None, use_ssl) as conn:
-        conn._rollback()
+    with connect(host, user, password, None, port, use_ssl) as conn:
         conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-        conn._process_messages(None)
 
 def drop_database(database, host, user, password='', port=None, use_ssl=False):
-    with connect(host, user, password, None, port, None, use_ssl) as conn:
-        conn._rollback()
+    with connect(host, user, password, None, port, use_ssl) as conn:
         conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-        conn._process_messages(None)
