@@ -244,5 +244,5 @@ class Connection:
     def drop_database(self, database):
         self._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         
-def connect(host, user, password='', database=None, port=None, use_ssl=False):
-    return Connection(user, password, database, host, port if port else 5432, use_ssl)
+def connect(host, user, password='', database=None, port=5432, use_ssl=False):
+    return Connection(user, password, database, host, port, use_ssl)
