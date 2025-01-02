@@ -56,8 +56,8 @@ class Cursor:
     def close(self):
         self.connection = None
 
-class Connection:
-    def __init__(self, user, password, database, host, port, use_ssl):
+class connect:
+    def __init__(self, host, user, password='', database=None, port=5432, use_ssl=False):
         self.user = user
         self.password = password
         self.database = database
@@ -231,9 +231,6 @@ class Connection:
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password='', database=None, port=5432, use_ssl=False):
-    return Connection(user, password, database, host, port, use_ssl)
-
 def create_database(host, user, password='', database=None, port=5432, use_ssl=False):
     conn = connect(host, user, password, None, port, use_ssl)
     conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
@@ -243,3 +240,4 @@ def drop_database(host, user, password='', database=None, port=5432, use_ssl=Fal
     conn = connect(host, user, password, None, port, use_ssl)
     conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.close()
+    
