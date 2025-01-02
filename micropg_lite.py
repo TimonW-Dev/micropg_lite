@@ -246,3 +246,13 @@ class Connection:
         
 def connect(host, user, password='', database=None, port=None, use_ssl=False):
     return Connection(user, password, database, host, port if port else 5432, use_ssl)
+
+def create_database(host, user, password='', database=None, port=None, use_ssl=False):
+    conn = connect(host, user, password, None, port, use_ssl)
+    conn.create_database(database)
+    conn.close()
+
+def drop_database(host, user, password='', database=None, port=None, use_ssl=False):
+    conn = connect(host, user, password, None, port, use_ssl)
+    conn.drop_database(database)
+    conn.close()
