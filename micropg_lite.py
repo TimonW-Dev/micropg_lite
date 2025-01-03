@@ -198,13 +198,13 @@ class connect:
 
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
-            self._begin()
+            self.begin()
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self._process_messages(obj)
         if self.autocommit:
             self.commit()
 
-    def _begin(self):
+    def begin(self):
         if self._ready_for_query == b'E':
             self._rollback()
         self._send_message(b'Q', b"BEGIN\x00")
@@ -214,7 +214,7 @@ class connect:
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self._process_messages(None)
-            self._begin()
+            self.begin()
 
     def _rollback(self):
         if self.sock:
@@ -223,7 +223,7 @@ class connect:
 
     def rollback(self):
         self._rollback()
-        self._begin()
+        self.begin()
 
     def close(self):
         if self.sock:
