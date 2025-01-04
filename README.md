@@ -1,4 +1,4 @@
-# micropg_lite
+# micropg_lite (The worlds lightest PostgreSQL driver for micropython)
 
 ## Installation
 
@@ -16,7 +16,7 @@
 import micropg_lite
 ````
 
-If there are problems or questions, open an issue on this github repository.
+If there are problems or questions, open an issue on this github repository. We will be happy to help you with your questions.
 
 ## microcontroller file tree
 ````
