@@ -44,10 +44,11 @@ If there are problems or questions, open an issue on this github repository. We 
 You need to establish a network connection before executing micropg_lite code. The [SELECT example](#select-example-with-wifi-connection) inclueds the wifi template. All other examples do not include the wifi template.
 
 ### examples/ folder
-The examples/ folder includes the database sql script which was used to create the database and the used data in all those examples. The examples folder also includes the full scripts used in this readme including the wifi connection template.
+The [examples](https://github.com/TimonW-Dev/micropg_lite/tree/main/examples) folder has a [docker-postgres-container-setup.sh](https://github.com/TimonW-Dev/micropg_lite/blob/main/examples/docker-postgres-container-setup.sh) script to create an empty PostgreSQL container and an [exampleDatabase.sql](https://github.com/TimonW-Dev/micropg_lite/blob/main/examples/exampleDatabase.sql) file which contains the database used in the examples. You will also find complete test scripts with WLAN connection templates and examples for CREATE/DROP TABLE and DATABASE in the examples folder.
 
 ### SELECT example with wifi connection:
 ````python
+import time
 import network   # Handles the wifi connection
 import micropg_lite
 
