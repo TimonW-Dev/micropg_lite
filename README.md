@@ -1,4 +1,5 @@
 # micropg_lite (The worlds lightest PostgreSQL driver for micropython)
+This README contains the most important things you need to know about micropg_lite. You can find detailed documentation in the [wiki of this repository](https://github.com/TimonW-Dev/micropg_lite/wiki).
 
 ## Installation
 
@@ -46,11 +47,16 @@ wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect(ssid, password)
 
+while not wlan.isconnected():
+    print("Wifi Status: ", wlan.status())
+    time.sleep(1)
+
+
 print("Wifi connected")
 
-conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
-                    user='postgres', # replace the string with your user
-                    password='123456', # replace the string with your password
+conn = micropg_lite.connect(host='127.0.0.1', # To Do: replace the string with your server ip-address
+                    user='postgres', # To Do: replace the string with your user
+                    password='123456', # To Do: replace the string with your password
                     database='exampledatabase')
 cur = conn.cursor()
 
@@ -112,3 +118,4 @@ conn.close()
 ## micropg_lite limitations
 - reduced error handling
 - no MD5 auth method support
+- No native support for the so-called "executemany" function

@@ -11,7 +11,7 @@ password = 'secret'
 db_host = '127.0.0.1'
 db_user = 'postgres'
 db_password = '123456'
-db_database = 'postgres'
+db_database = 'exampledatabase'
 
 # Connect to network
 wlan = network.WLAN(network.STA_IF)
@@ -30,6 +30,6 @@ conn = micropg_lite.connect(host=db_host,
                     database=db_database)
 cur = conn.cursor()
 
-cur.execute("DELETE FROM customers WHERE firstName = 'Jörg-Ülrîch™' AND lastName = 'Müllèr-van der Schmïdt§'")
+cur.execute("delete from customers where id=1;")
 conn.commit()
 conn.close()
