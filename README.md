@@ -93,7 +93,7 @@ conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your ser
                     database='exampledatabase')
 cur = conn.cursor()
 
-cur.execute('INSERT INTO customers (id, firstName, lastName, email) values (%s, %s, %s, %s)', [5, 'David', 'Wilson', 'david.wilson@example.com'])
+cur.execute('INSERT INTO customers (id, firstName, lastName, email) values (%s, %s, %s, %s)', ['5', 'David', 'Wilson', 'david.wilson@example.com'])
 conn.commit()
 conn.close()
 
