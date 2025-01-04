@@ -14,7 +14,7 @@ nakagami](https://github.com/nakagami). If you have RAM/memory issues with [micr
 micropg_lite has been specially optimised for the ESP8266 microchip and other microchips that have little RAM. micopg_lite works on any microchip that runs micropyhton.
 
 ### Major changes in micropg_lite V3
-Those who have already worked with micropg_lite V2 know that the micropg_lite V2 driver has some limitations in terms of functionality. Therefore, micropg_lite V3 was optimized from scratch to bring back the functionality that is present in [Nakagami's](https://github.com/nakagami) [micropg](https://github.com/nakagami/micropg). micropg_lite V3 has the advantage that, in addition to having almost no more limitations, it also uses fewer resources than micropg_lite V2.
+Those who have already worked with micropg_lite V2 know that the micropg_lite V2 driver has some limitations in terms of functionality. Therefore, micropg_lite V3 was optimized from scratch to bring back the functionality that is present in [Nakagami's](https://github.com/nakagami) [micropg](https://github.com/nakagami/micropg).
 
 ## Installation
 
