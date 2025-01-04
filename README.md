@@ -1,4 +1,6 @@
-# micropg_lite V3 (The worlds lightest PostgreSQL driver for micropython, )
+# micropg_lite V3  
+**The world's lightest PostgreSQL driver for MicroPython, made for ESP8266**
+
 This README contains the most important things you need to know about micropg_lite. You can find detailed documentation in the [wiki of this repository](https://github.com/TimonW-Dev/micropg_lite/wiki).
 
 ## About micropg_lite
