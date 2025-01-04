@@ -58,8 +58,8 @@ class Cursor:
     def close(self):
         self.connection = None
 
-class Connection:
-    def __init__(self, user, password, database, host, port, use_ssl):
+class connect:
+    def __init__(self, host, user, password, database, port=5432, use_ssl=False):
         self.user = user
         self.password = password
         self.database = database
@@ -200,13 +200,13 @@ class Connection:
 
     def execute(self, query, obj=None):
         if self._ready_for_query != b'T':
-            self._begin()
+            self.begin()
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self._process_messages(obj)
         if self.autocommit:
             self.commit()
 
-    def _begin(self):
+    def begin(self):
         if self._ready_for_query == b'E':
             self._rollback()
         self._send_message(b'Q', b"BEGIN\x00")
@@ -216,7 +216,7 @@ class Connection:
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self._process_messages(None)
-            self._begin()
+            self.begin()
 
     def _rollback(self):
         if self.sock:
@@ -225,7 +225,7 @@ class Connection:
 
     def rollback(self):
         self._rollback()
-        self._begin()
+        self.begin()
 
     def close(self):
         if self.sock:
@@ -233,15 +233,13 @@ class Connection:
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password='', database=None, port=5432, use_ssl=False):
-    return Connection(user, password, database, host, port, use_ssl)
-
-def create_database(host, user, password='', database=None, port=5432, use_ssl=False):
+def create_database(host, user, password, database, port=5432, use_ssl=False):
     conn = connect(host, user, password, None, port, use_ssl)
     conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.close()
 
-def drop_database(host, user, password='', database=None, port=5432, use_ssl=False):
+def drop_database(host, user, password, database, port=5432, use_ssl=False):
     conn = connect(host, user, password, None, port, use_ssl)
     conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.close()
+    
