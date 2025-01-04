@@ -3,6 +3,8 @@
 
 This README contains the most important things you need to know about micropg_lite. You can find detailed documentation in the [wiki of this repository](https://github.com/TimonW-Dev/micropg_lite/wiki).
 
+If there are any problems, questions, bugs or suggestions for improvement, please open an [issue](https://github.com/TimonW-Dev/micropg_lite/issues) on this Github repository or write an email to the email address linked in [my profile](https://github.com/TimonW-Dev). We are happy to provide the necessary free support to help you with your micropg_lite requests.
+
 ## About micropg_lite
 ### Difference between [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) and [micropg](https://github.com/nakagami/micropg)
 
@@ -29,8 +31,6 @@ Those who have already worked with micropg_lite V2 know that the micropg_lite V2
 ````python
 import micropg_lite
 ````
-
-If there are problems or questions, open an issue on this github repository. We will be happy to help you with your questions.
 
 ## microcontroller file tree
 ````
@@ -68,9 +68,9 @@ while not wlan.isconnected():
 
 print("Wifi connected")
 
-conn = micropg_lite.connect(host='127.0.0.1', # To Do: replace the string with your server ip-address
-                    user='postgres', # To Do: replace the string with your user
-                    password='123456', # To Do: replace the string with your password
+conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
+                    user='postgres',
+                    password='123456',
                     database='exampledatabase')
 cur = conn.cursor()
 
@@ -90,9 +90,9 @@ for r1 in selectresult:
 
 ### INSERT example
 ````python
-conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
-                    user='postgres', # replace the string with your user
-                    password='123456', # replace the string with your password
+conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
+                    user='postgres',
+                    password='123456',
                     database='exampledatabase')
 cur = conn.cursor()
 
@@ -104,9 +104,9 @@ conn.close()
 
 ### UPDATE example
 ```` python
-conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
-                    user='postgres', # replace the string with your user
-                    password='123456', # replace the string with your password
+conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
+                    user='postgres',
+                    password='123456',
                     database='exampledatabase')
 cur = conn.cursor()
 
@@ -117,9 +117,9 @@ conn.close()
 
 ### DELETE example
 ```` python
-conn = micropg_lite.connect(host='127.0.0.1', # replace the string with your server ip-address
-                    user='postgres', # replace the string with your user
-                    password='123456', # replace the string with your password
+conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
+                    user='postgres',
+                    password='123456',
                     database='exampledatabase')
 cur = conn.cursor()
 
