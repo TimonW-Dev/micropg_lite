@@ -1,5 +1,16 @@
-# micropg_lite (The worlds lightest PostgreSQL driver for micropython)
+# micropg_lite V3 (The worlds lightest PostgreSQL driver for micropython, )
 This README contains the most important things you need to know about micropg_lite. You can find detailed documentation in the [wiki of this repository](https://github.com/TimonW-Dev/micropg_lite/wiki).
+
+## About micropg_lite
+### Difference between [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) and [micropg](https://github.com/nakagami/micropg)
+
+[micropg_lite](https://github.com/TimonW-Dev/micropg_lite) is a lightweight version based on [micropg](https://github.com/nakagami/micropg) by [
+nakagami](https://github.com/nakagami). If you have RAM/memory issues with [micropg](https://github.com/nakagami/micropg) than this library might solve this issue.
+
+micropg_lite was specially optimised for the ESP8266 microchip to make do with limited RAM. micopg_lite works on any microchip that runs micropyhton.
+
+### Major changes in micropg_lite V3
+Those who have already worked with micropg_lite V2 know that the micropg_lite V2 driver has some limitations in terms of functionality. Therefore, micropg_lite V3 was developed from scratch to bring back the functionality that is present in [Nakagami's](https://github.com/nakagami) [micropg](https://github.com/nakagami/micropg). micropg_lite V3 has the advantage that, in addition to having almost no more limitations, it also uses fewer resources than micropg_lite V2.
 
 ## Installation
 
