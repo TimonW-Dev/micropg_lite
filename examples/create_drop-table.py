@@ -30,6 +30,15 @@ conn = micropg_lite.connect(host=db_host,
                     database=db_database)
 cur = conn.cursor()
 
-cur.execute("update customers set firstName='UpdatedFirstName' where id=2;")
+cur.execute('CREATE TABLE testTable (testChar varchar(45), testInt Int, testDate date);')
+conn.commit()
+
+print("Table crated")
+
+time.sleep(2)
+
+cur.execute('DROP TABLE testTable;')
 conn.commit()
 conn.close()
+
+print("Table dropped")

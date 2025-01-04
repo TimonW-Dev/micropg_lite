@@ -11,7 +11,6 @@ password = 'secret'
 db_host = '127.0.0.1'
 db_user = 'postgres'
 db_password = '123456'
-db_database = 'exampledatabase'
 
 # Connect to network
 wlan = network.WLAN(network.STA_IF)
@@ -24,12 +23,20 @@ while not wlan.isconnected():
 
 print("Wifi connected")
 
-conn = micropg_lite.connect(host=db_host,
-                    user=db_user,
-                    password=db_password,
-                    database=db_database)
-cur = conn.cursor()
+try:
+    micropg_lite.create_database(
+        host=db_host, user=db_user, password=db_password, database='createDropDatabaseTest'
+    )
+    print("CREATE DATABASE ok")
+    
+    try:
+        micropg_lite.drop_database(
+            host=db_host, user=db_user, password=db_password, database='createDropDatabaseTest'
+        )
+        print("DROP DATABASE ok")
 
-cur.execute("update customers set firstName='UpdatedFirstName' where id=2;")
-conn.commit()
-conn.close()
+    except Exception:
+        print("DROP DATABASE failed")
+    
+except Exception:
+    print("CREATE DATABASE failed")
