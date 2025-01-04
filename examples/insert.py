@@ -11,7 +11,7 @@ password = 'secret'
 db_host = '127.0.0.1'
 db_user = 'postgres'
 db_password = '123456'
-db_database = 'postgres'
+db_database = 'exampledatabase'
 
 # Connect to network
 wlan = network.WLAN(network.STA_IF)
@@ -30,6 +30,6 @@ conn = micropg_lite.connect(host=db_host,
                     database=db_database)
 cur = conn.cursor()
 
-cur.execute("UPDATE customers SET firstName = 'Jörg-Ülrîch™', lastName = 'Müllèr-van der Schmïdt§', email = 'joerg.ueli+mueller-schmidt_123@tæst.çøm', specialNote = CONCAT(specialNote, ' | Achtung: Name geändert! (ツ)_/¯'), loyaltyPoints = loyaltyPoints + 42 WHERE firstName = 'Jörg@' AND lastName = 'Müller-Schmïdt#'")
+cur.execute('INSERT INTO customers (id, firstName, lastName, email) values (%s, %s, %s, %s)', ['5', 'David', 'Wilson', 'david.wilson@example.com'])
 conn.commit()
 conn.close()
