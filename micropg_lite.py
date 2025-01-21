@@ -93,35 +93,31 @@ class connect:
             data = self._read(int.from_bytes(self._read(4), 'big') - 4)
             if code == 90: self._ready_for_query = data; break
             elif code == 82:
-                auth_method = int.from_bytes(data[:4], 'big')
-                if auth_method == 0: pass
-                elif auth_method == 10:
-                    nonce = str(random.getrandbits(32))
-                    first = f'n,,n=,r={nonce}'.encode('utf-8')
-                    msg = b'SCRAM-SHA-256\x00' + (len(first)).to_bytes(4, 'big') + first
-                    self._write(b'p' + (len(msg) + 4).to_bytes(4, 'big') + msg)
+                nonce = str(random.getrandbits(32))
+                first = f'n,,n=,r={nonce}'.encode('utf-8')
+                msg = b'SCRAM-SHA-256\x00' + (len(first)).to_bytes(4, 'big') + first
+                self._write(b'p' + (len(msg) + 4).to_bytes(4, 'big') + msg)
+                assert ord(self._read(1)) == 82
+                data = self._read(int.from_bytes(self._read(4), 'big') - 4)
+                assert int.from_bytes(data[:4], 'big') == 11
+                server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
+                assert server['r'].startswith(nonce)
+                pw_bytes = self.password.encode('utf-8')
+                iters = int(server['i'])
+                u1 = hmac_sha256_digest(pw_bytes, binascii.a2b_base64(server['s']) + b'\x00\x00\x00\x01')
+                ui = int.from_bytes(u1, 'big')
+                for _ in range(iters - 1):
+                    u1 = hmac_sha256_digest(pw_bytes, u1)
+                    ui ^= int.from_bytes(u1, 'big') 
+                client_key = hmac_sha256_digest(ui.to_bytes(32, 'big'), b"Client Key")
+                auth_msg = f"n=,r={nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
+                proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
+                final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
+                self._write(b'p' + (len(final) + 4).to_bytes(4, 'big') + final)
+                for _ in range(3):
                     assert ord(self._read(1)) == 82
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    assert int.from_bytes(data[:4], 'big') == 11
-                    server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
-                    assert server['r'].startswith(nonce)
-                    pw_bytes = self.password.encode('utf-8')
-                    iters = int(server['i'])
-                    u1 = hmac_sha256_digest(pw_bytes, binascii.a2b_base64(server['s']) + b'\x00\x00\x00\x01')
-                    ui = int.from_bytes(u1, 'big')
-                    for _ in range(iters - 1):
-                        u1 = hmac_sha256_digest(pw_bytes, u1)
-                        ui ^= int.from_bytes(u1, 'big') 
-                    client_key = hmac_sha256_digest(ui.to_bytes(32, 'big'), b"Client Key")
-                    auth_msg = f"n=,r={nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
-                    proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
-                    final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
-                    self._write(b'p' + (len(final) + 4).to_bytes(4, 'big') + final)
-                    for _ in range(3):
-                        assert ord(self._read(1)) == 82
-                        data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                        if int.from_bytes(data[:4], 'big') == 0: break
-                else: raiseExceptionLostConnection()
+                    if int.from_bytes(data[:4], 'big') == 0: break
             elif code == 67 and obj:
                 cmd = data[:-1].decode('ascii')
                 if cmd == 'SHOW': obj._rowcount = 1
