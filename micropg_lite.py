@@ -173,17 +173,12 @@ class connect:
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
                 
     def _read(self, ln):
-        if not self.sock:
-            raiseExceptionLostConnection()
+        if not self.sock: raiseExceptionLostConnection()
         r = bytearray(ln)
         pos = 0
         while pos < ln:
-            if hasattr(self.sock, "read"):
-                chunk = self.sock.read(ln - pos)
-            else:
-                chunk = self.sock.recv(ln - pos)
-            if not chunk:
-                raiseExceptionLostConnection()
+            chunk = self.sock.read(ln - pos) if hasattr(self.sock, "read") else self.sock.recv(ln - pos)
+            if not chunk: raiseExceptionLostConnection()
             r[pos:pos+len(chunk)] = chunk
             pos += len(chunk)
         return bytes(r)
