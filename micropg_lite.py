@@ -27,7 +27,7 @@
 # micropg (https://github.com/nakagami/micropg) a minipg (https://github.com/nakagami/minipg) subset.
 ##############################################################################
 
-### Version 3.0.0
+### Version 3.1.0
 
 import ssl, hashlib, socket, binascii, random
 
@@ -120,7 +120,8 @@ class connect:
                     if int.from_bytes(data[:4], 'big') == 0: break
             elif code == 67 and obj:
                 cmd = data[:-1].decode('ascii')
-                if cmd == 'SHOW': obj._rowcount = 1
+                if cmd == 'SHOW':
+                    obj._rowcount = 1
                 else:
                     parts = cmd.split()
                     if parts and parts[-1].isdigit(): obj._rowcount = int(parts[-1])
@@ -233,4 +234,3 @@ def drop_database(host, user, password, database, port=5432, use_ssl=False):
     conn = connect(host, user, password, None, port, use_ssl)
     conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.close()
-    
