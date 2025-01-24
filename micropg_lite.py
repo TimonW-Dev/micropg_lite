@@ -91,7 +91,9 @@ class connect:
             try: code = ord(self._read(1))
             except: raiseExceptionLostConnection()
             data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-            if code == 90: self._ready_for_query = data; break
+            if code == 90: 
+                self._ready_for_query = data
+                break
             elif code == 82:
                 nonce = str(random.getrandbits(32))
                 first = f'n,,n=,r={nonce}'.encode('utf-8')
@@ -99,9 +101,7 @@ class connect:
                 self._write(b'p' + (len(msg) + 4).to_bytes(4, 'big') + msg)
                 assert ord(self._read(1)) == 82
                 data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                assert int.from_bytes(data[:4], 'big') == 11
                 server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
-                assert server['r'].startswith(nonce)
                 pw_bytes = self.password.encode('utf-8')
                 iters = int(server['i'])
                 u1 = hmac_sha256_digest(pw_bytes, binascii.a2b_base64(server['s']) + b'\x00\x00\x00\x01')
@@ -119,12 +119,8 @@ class connect:
                     data = self._read(int.from_bytes(self._read(4), 'big') - 4)
                     if int.from_bytes(data[:4], 'big') == 0: break
             elif code == 67 and obj:
-                cmd = data[:-1].decode('ascii')
-                if cmd == 'SHOW':
-                    obj._rowcount = 1
-                else:
-                    parts = cmd.split()
-                    if parts and parts[-1].isdigit(): obj._rowcount = int(parts[-1])
+                parts = data[:-1].decode('ascii').split()
+                if parts and parts[-1].isdigit(): obj._rowcount = int(parts[-1])
             elif code == 84 and obj:
                 count = int.from_bytes(data[:2], 'big')
                 obj.description = [None] * count
@@ -136,12 +132,7 @@ class connect:
                     try: name = name.decode(self.encoding)
                     except: pass
                     type_code = int.from_bytes(data[n+6:n+10], 'big')
-                    if type_code == 1043: size, precision, scale = int.from_bytes(data[n+12:n+16], 'big') - 4, -1, -1
-                    elif type_code == 1700:
-                        size = int.from_bytes(data[n+10:n+12], 'big')
-                        precision = int.from_bytes(data[n+12:n+14], 'big')
-                        scale = precision - int.from_bytes(data[n+14:n+16], 'big')
-                    else: size, precision, scale = int.from_bytes(data[n+10:n+12], 'big'), -1, -1
+                    size, precision, scale = int.from_bytes(data[n+10:n+12], 'big'), -1, -1
                     obj.description[i] = (name, type_code, None, size, precision, scale, None)
                     n += 18
             elif code == 68 and obj:
@@ -152,8 +143,7 @@ class connect:
                         ln = int.from_bytes(data[n:n+4], 'big')
                         col_data = data[n+4:n+4+ln]
                         col_oid = obj.description[len(row)][1]
-                        col_encoding = self.encoding
-                        decoded_data = col_data.decode(col_encoding) if col_data else None
+                        decoded_data = col_data.decode(self.encoding) if col_data else None
                         if col_oid == 16: decoded_data = (decoded_data == 't')
                         elif col_oid in (21, 23, 20, 26): decoded_data = int(decoded_data)
                         elif col_oid in (700, 701): decoded_data = float(decoded_data)
