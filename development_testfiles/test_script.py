@@ -176,14 +176,14 @@ conn.autocommit = False
 print("---")
 
 ### Data types handling test
-cur.execute("CREATE TABLE data_types_test (char_col CHAR(1), int_col INT, float_col FLOAT, bool_col BOOLEAN, date_col DATE);")
+cur.execute("CREATE TABLE data_types_test (char_col CHAR(1), int_col INT, float_col FLOAT, bool_col BOOLEAN, date_col DATE, null_col VARCHAR(45));")
 conn.commit()
-cur.execute("INSERT INTO data_types_test (char_col, int_col, float_col, bool_col, date_col) VALUES ('a', 1, 1.1, TRUE, '2024-12-31');")
+cur.execute("INSERT INTO data_types_test (char_col, int_col, float_col, bool_col, date_col, null_col) VALUES ('a', 1, 1.1, TRUE, '2024-12-31', NULL);")
 conn.commit()
 cur.execute("SELECT * FROM data_types_test;")
 selectresult = cur.fetchall()
 print(selectresult)
-if (selectresult == [('a', 1, 1.1, True, '2024-12-31')]):
+if (selectresult == [('a', 1, 1.1, True, '2024-12-31', None)]):
     print("DATA TYPES ok")
 else:
     print("DATA TYPES !!!failed!!!")
