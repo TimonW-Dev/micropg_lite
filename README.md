@@ -130,6 +130,11 @@ conn.close()
 ````
 
 ## micropg_lite limitations
-- reduced error handling
-- no MD5 auth method support
+- Reduced error handling
+- No MD5 auth method support
 - No native support for the so-called "executemany" function
+
+## YouTube Tutorial
+Tutorial by [Fusion Automate](https://fusionautomate.in/logging-sensor-data-to-cloud-postgresql-database-with-raspberry-pi-pico-w/). Thanks for creating. 
+
+[![Tutorial by Fusion Automate](https://img.youtube.com/vi/MK_N49lRzlQ/0.jpg)](https://youtu.be/MK_N49lRzlQ?si=hnv1a1Ya2w6zy7NJ)
