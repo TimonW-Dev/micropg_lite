@@ -1,7 +1,12 @@
 # micropg_lite V3  
-**The world's lightest PostgreSQL driver for MicroPython, made for ESP8266**
+**Lightweight PostgreSQL database driver for MicroPython...** <br>
+...made for ESP8266, ESP32, RP2040 (Raspberry Pi Pico W) and other microcontrollers.
+
+---
 
 This README contains the most important things you need to know about micropg_lite. You can find detailed documentation in the [wiki of this repository](https://github.com/TimonW-Dev/micropg_lite/wiki).
+
+**micropg_superlite is based on [micropg](https://github.com/nakagami/micropg), which was developed by [nakagami](https://github.com/nakagami). Therefore very big thanks to nakagami for the great development. Without micropg there wouldn't be micropg_lite!**
 
 If there are any problems, questions, bugs or suggestions for improvement, please open an [issue](https://github.com/TimonW-Dev/micropg_lite/issues) on this Github repository or write an email to the email address linked in [my profile](https://github.com/TimonW-Dev). We are happy to provide the necessary free support to help you with your micropg_lite requests.
 
@@ -9,12 +14,15 @@ If there are any problems, questions, bugs or suggestions for improvement, pleas
 ### Difference between [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) and [micropg](https://github.com/nakagami/micropg)
 
 [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) is a lightweight version based on [micropg](https://github.com/nakagami/micropg) by [
-nakagami](https://github.com/nakagami). If you have RAM/memory issues with [micropg](https://github.com/nakagami/micropg) than this library might solve this issue.
+nakagami](https://github.com/nakagami). If you have RAM/memory issues with micropg than this library might solve this issue.
 
-micropg_lite has been specially optimised for the ESP8266 microchip and other microchips that have little RAM. micopg_lite works on any microchip that runs micropyhton.
+micropg_lite has been specially optimised for the ESP8266 and other microchips that have little RAM. micopg_lite works on any microchip that runs micropyhton.
 
 ### Major changes in micropg_lite V3
 Those who have already worked with micropg_lite V2 know that the micropg_lite V2 driver has some limitations in terms of functionality. Therefore, micropg_lite V3 was optimized from scratch to bring back the functionality that is present in [Nakagami's](https://github.com/nakagami) [micropg](https://github.com/nakagami/micropg).
+
+### There is even a lighter version
+[micropg_superlite](https://github.com/TimonW-Dev/micropg_superlite) is based on micropg_lite, but some functions have been removed to make the PostgreSQL driver even lighter. If you still have problems with RAM utilization, you can try micropg_superlite. More information can be found in the [README](https://github.com/TimonW-Dev/micropg_superlite#readme) from the [micropg_superlite](https://github.com/TimonW-Dev/micropg_superlite) repository.
 
 ## Installation
 
