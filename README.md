@@ -34,6 +34,8 @@ Those who have already worked with micropg_lite V2 know that the micropg_lite V2
     
     Open in the top bar the "View" menu and make sure that the entry "Files" has a "✓", if not then click on "Files". Now you can directly download and upload files from your computer to the microcontroller. You also can create folders on the microcontroller.
 
+    For more information, take a look at the following [documentation](https://www.shortitdoc.com/?doc=.%2FDocumentation%2FMicro+Python%2FUpload+Library+to+Microcontroller.md).
+
 3. Now you should be able to import the library to your microcontroller in a MicroPython file.
 
 ````python
