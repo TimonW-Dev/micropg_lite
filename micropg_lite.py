@@ -66,7 +66,7 @@ class connect:
         self.host = host
         self.port = port
         self.use_ssl = use_ssl
-        self.encoding = 'UTF8'
+        self.encoding = 'utf-8'
         self.autocommit = False
         self._ready_for_query = b'I'
         
