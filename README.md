@@ -1,147 +1,190 @@
-# micropg_lite V4
+# micropg_lite
+
 **Lightweight PostgreSQL database driver for MicroPython...** <br>
 ...made for ESP8266, ESP32, RP2040 (Raspberry Pi Pico W) and other microcontrollers.
 
----
+`micropg_lite` is optimized for boards such as the ESP8266, ESP32, and RP2040 (Raspberry Pi Pico W). This README covers the essentials; see the [project wiki](https://github.com/TimonW-Dev/micropg_lite/wiki) for more detailed documentation.
 
-This README contains the most important things you need to know about micropg_lite. You can find detailed documentation in the [wiki of this repository](https://github.com/TimonW-Dev/micropg_lite/wiki).
+## 📚 Contents
 
-**micropg_superlite is based on [micropg](https://github.com/nakagami/micropg), which was developed by [nakagami](https://github.com/nakagami). Therefore very big thanks to nakagami for the great development. Without micropg there wouldn't be micropg_lite!**
+- [About](#-about)
+- [Features and comparison](#-features-and-comparison)
+- [Installation](#-installation)
+- [Examples](#-examples)
+- [Limitations](#-limitations)
+- [Tutorial](#-tutorial)
+- [Support and acknowledgements](#-support-and-acknowledgements)
 
-If there are any problems, questions, bugs or suggestions for improvement, please open an [issue](https://github.com/TimonW-Dev/micropg_lite/issues) on this Github repository or write an email to the email address linked in [my profile](https://github.com/TimonW-Dev). We are happy to provide the necessary free support to help you with your micropg_lite requests.
+## ℹ️ About micropg_lite
 
-## About micropg_lite
-### Difference between [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) and [micropg](https://github.com/nakagami/micropg)
+`micropg_lite` is a lightweight version of [`micropg`](https://github.com/nakagami/micropg). It is designed for MicroPython devices with limited RAM while retaining support for common SQL operations.
 
-[micropg_lite](https://github.com/TimonW-Dev/micropg_lite) is a lightweight version based on [micropg](https://github.com/nakagami/micropg) by [
-nakagami](https://github.com/nakagami). If you have RAM/memory issues with micropg than this library might solve this issue.
+If you need to reduce memory usage further, [`micropg_superlite`](https://github.com/TimonW-Dev/micropg_superlite) is based on `micropg_lite` and removes some features to use even less RAM.
 
-micropg_lite has been specially optimised for the ESP8266 and other microchips that have little RAM. micopg_lite works on any microchip that runs micropyhton.
+### 📊 Features and comparison
 
-### There is even a lighter version
-[micropg_superlite](https://github.com/TimonW-Dev/micropg_superlite) is based on micropg_lite, but some functions have been removed to make the PostgreSQL driver even lighter. If you still have problems with RAM utilization, you can try micropg_superlite. More information can be found in the [README](https://github.com/TimonW-Dev/micropg_superlite#readme) from the [micropg_superlite](https://github.com/TimonW-Dev/micropg_superlite) repository.
+Compare the features and measured RAM usage of the drivers to choose the right PostgreSQL library for your MicroPython project.
 
-## Installation
+| Feature | [micropg](https://github.com/nakagami/micropg) | [micropg_lite](https://github.com/TimonW-Dev/micropg_lite) **(this project)** | [micropg_superlite](https://github.com/TimonW-Dev/micropg_superlite) |
+|---|---|---|---|
+| 💾 RAM usage¹ | 27,552 bytes (26.91 KiB)<br>Reference | 8,336 bytes (8.14 KiB)<br>70% less than `micropg` | 6,928 bytes (6.77 KiB)<br>75% less than `micropg`; 17% less than `micropg_lite` |
+| 🔍 `SELECT` | ✅ Supported | ✅ Supported | ✅ Supported |
+| ➕ `INSERT` | ✅ Supported | ✅ Supported | ✅ Supported |
+| ✏️ `UPDATE` | ✅ Supported | ✅ Supported | ✅ Supported |
+| 🗑️ `DELETE` | ✅ Supported | ✅ Supported | ✅ Supported |
+| 🔐 Authentication | ✅ SCRAM-SHA-256, MD5 | ⚠️ SCRAM-SHA-256 only | ⚠️ SCRAM-SHA-256 only |
+| ⚠️ Detailed error handling | ✅ Full | ⚠️ Reduced | ⚠️ Reduced |
+| 🔒 SSL | ✅ Supported | ✅ Supported | ❌ Not supported |
+| 💾 Manual commit | ✅ Supported | ✅ Supported | ❌ Not supported (forced autocommit) |
+| ↩️ `ROLLBACK` | ✅ Supported | ✅ Supported | ❌ Not supported |
+| 🗄️ Create/drop database | ✅ Supported | ✅ Supported | ❌ Not supported |
+| 📦 Native `executemany` support | ✅ Supported | ❌ Not supported | ❌ Not supported |
+| 📖 Source code readability | ✅ Readable, clear structure | ⚠️ Compact and optimized for RAM | ⚠️ Compact and optimized for RAM |
 
-1. Download the `micropg_lite.py` file from this repository to your local computer.
+¹ RAM usage was measured on a Raspberry Pi Pico W running MicroPython firmware 1.29.0. Actual usage may vary depending on the firmware build and measurement conditions.
 
-2. Copy the `micropg_lite.py` file to the "/lib" folder on the microcontroller using the Thonny IDE or another program. If there is no "lib" folder in the root directory, you have to create it.
+## 📥 Installation
 
-    **Hint** for the Thony IDE:
-    
-    Open in the top bar the "View" menu and make sure that the entry "Files" has a "✓", if not then click on "Files". Now you can directly download and upload files from your computer to the microcontroller. You also can create folders on the microcontroller.
+### Choose a file
 
-    For more information, take a look at the following [documentation](https://www.shortitdoc.com/?doc=.%2FDocumentation%2FMicro+Python%2FUpload+Library+to+Microcontroller.md).
+We recommend [`micropg_lite.py`](https://github.com/TimonW-Dev/micropg_lite/blob/main/micropg_lite.py). If you want to save a little more RAM, you can use the precompiled [`micropg_lite.mpy`](https://github.com/TimonW-Dev/micropg_lite/blob/main/micropg_lite.mpy) file. For most projects, the `.py` file is sufficient. The `.mpy` file may not be compatible with every MicroPython firmware version and is not as easy to edit or debug.
 
-3. Now you should be able to import the library to your microcontroller in a MicroPython file.
+### Install on your microcontroller
 
-````python
+1. Download the [micropg_lite.py](https://github.com/TimonW-Dev/micropg_lite/blob/main/micropg_lite.py) file from this [repository](https://github.com/TimonW-Dev/micropg_lite) to your local computer.
+2. Copy it to the `/lib` folder on your microcontroller using Thonny IDE or another file transfer tool. Create the folder if it does not exist.
+   - **Thonny tip:** Open **View** in the top bar and enable **Files** to upload files and create folders on the microcontroller.
+3. Import the library in your MicroPython script. The import name is the same for both file formats:
+
+```python
 import micropg_lite
-````
+```
 
-## microcontroller file tree
-````
+The files on your microcontroller should be arranged like this:
+
+```text
 /
-├─ example.py
-└─ lib/
-    └─ micropg_lite.py
-````
+|- example.py
+|- lib/
+    |- micropg_lite.py
+```
 
-## Examples
-You need to establish a network connection before executing micropg_lite code. The [SELECT example](#select-example-with-wifi-connection) inclueds the wifi template. All other examples do not include the wifi template.
+## 🚀 Examples
 
-### examples/ folder
-The [examples](https://github.com/TimonW-Dev/micropg_lite/tree/main/examples) folder has a [docker-postgres-container-setup.sh](https://github.com/TimonW-Dev/micropg_lite/blob/main/examples/docker-postgres-container-setup.sh) script to create an empty PostgreSQL container and an [exampleDatabase.sql](https://github.com/TimonW-Dev/micropg_lite/blob/main/examples/exampleDatabase.sql) file which contains the database used in the examples. You will also find complete test scripts with WLAN connection templates and examples for CREATE/DROP TABLE and DATABASE in the examples folder.
+Establish a network connection before running `micropg_lite` code. The SELECT example below includes a Wi-Fi connection template; the other examples assume that the connection is already established.
 
-### SELECT example with wifi connection:
-````python
+The [`examples/` folder](https://github.com/TimonW-Dev/micropg_lite/tree/main/examples) contains:
+
+- [`docker-postgres-container-setup.sh`](https://github.com/TimonW-Dev/micropg_lite/blob/main/examples/docker-postgres-container-setup.sh), to create an empty PostgreSQL container.
+- [`exampleDatabase.sql`](https://github.com/TimonW-Dev/micropg_lite/blob/main/examples/exampleDatabase.sql), the database used by the examples.
+- Complete test scripts with WLAN connection templates, plus examples for creating and dropping tables and databases.
+
+### 🔍 SELECT (including Wi-Fi setup)
+
+Replace the Wi-Fi credentials and server details with your own:
+
+```python
 import time
-import network   # Handles the wifi connection
+import network
 import micropg_lite
 
-### To Do: Fill in your wifi connection data and change the server data
 ssid = 'wifissid'
 password = 'secret'
 
-# Connect to network
+# Connect to the network
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect(ssid, password)
 
 while not wlan.isconnected():
-    print("Wifi Status: ", wlan.status())
+    print("Wi-Fi status:", wlan.status())
     time.sleep(1)
 
+print("Wi-Fi connected")
 
-print("Wifi connected")
-
-conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
-                    user='postgres',
-                    password='123456',
-                    database='exampledatabase')
+conn = micropg_lite.connect(
+    host='127.0.0.1',  # Replace with your server's IP address
+    user='postgres',
+    password='123456',
+    database='exampledatabase'
+)
 cur = conn.cursor()
 
 cur.execute('select * from customers')
 selectresult = cur.fetchall()
 conn.close()
 
-# EXAMPLE: Print raw data
+# Print the raw data
 print(selectresult)
 
-# EXAMPLE: Print data table
-for r1 in selectresult:
-    for r2 in r1:
-        print(r2, end="\t")
+# Print the data as rows
+for row in selectresult:
+    for value in row:
+        print(value, end="\t")
     print()
-````
+```
 
-### INSERT example
-````python
-conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
-                    user='postgres',
-                    password='123456',
-                    database='exampledatabase')
+### ➕ INSERT
+
+```python
+conn = micropg_lite.connect(
+    host='127.0.0.1',  # Replace with your server's IP address
+    user='postgres',
+    password='123456',
+    database='exampledatabase'
+)
 cur = conn.cursor()
 
-cur.execute('INSERT INTO customers (id, firstName, lastName, email) values (%s, %s, %s, %s)', ['5', 'David', 'Wilson', 'david.wilson@example.com'])
+cur.execute(
+    'INSERT INTO customers (id, firstName, lastName, email) values (%s, %s, %s, %s)',
+    ['5', 'David', 'Wilson', 'david.wilson@example.com']
+)
 conn.commit()
 conn.close()
+```
 
-````
+### ✏️ UPDATE
 
-### UPDATE example
-```` python
-conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
-                    user='postgres',
-                    password='123456',
-                    database='exampledatabase')
+```python
+conn = micropg_lite.connect(
+    host='127.0.0.1',  # Replace with your server's IP address
+    user='postgres',
+    password='123456',
+    database='exampledatabase'
+)
 cur = conn.cursor()
 
 cur.execute("update customers set firstName='UpdatedFirstName' where id=2;")
 conn.commit()
 conn.close()
-````
+```
 
-### DELETE example
-```` python
-conn = micropg_lite.connect(host='127.0.0.1', # To Do: Replace this string with the IP address of your server
-                    user='postgres',
-                    password='123456',
-                    database='exampledatabase')
+### 🗑️ DELETE
+
+```python
+conn = micropg_lite.connect(
+    host='127.0.0.1',  # Replace with your server's IP address
+    user='postgres',
+    password='123456',
+    database='exampledatabase'
+)
 cur = conn.cursor()
 
 cur.execute("delete from customers where id=1;")
 conn.commit()
 conn.close()
+```
 
-````
+## 🎥 Tutorial
 
-## micropg_lite limitations
-- Reduced error handling
-- No MD5 auth method support
-- No native support for the so-called "executemany" function
-
-## Tutorial
-[YouTube](https://youtu.be/MK_N49lRzlQ?si=hnv1a1Ya2w6zy7NJ) tutorial by [Fusion Automate](https://fusionautomate.in/logging-sensor-data-to-cloud-postgresql-database-with-raspberry-pi-pico-w/). Thanks for creating. 
+Watch the [YouTube tutorial by Fusion Automate](https://youtu.be/MK_N49lRzlQ?si=hnv1a1Ya2w6zy7NJ) on logging sensor data to PostgreSQL with a Raspberry Pi Pico W.
 
 [![Tutorial by Fusion Automate](https://img.youtube.com/vi/MK_N49lRzlQ/0.jpg)](https://youtu.be/MK_N49lRzlQ?si=hnv1a1Ya2w6zy7NJ)
+
+## 💬 Support and acknowledgements
+
+If you encounter a problem, have a question, or would like to suggest an improvement, please [open an issue](https://github.com/TimonW-Dev/micropg_lite/issues). You can also contact me by email using the address linked in [my profile](https://github.com/TimonW-Dev). This is an open-source project maintained on a voluntary basis, so support is provided as time allows.
+
+`micropg_lite` is based on [`micropg`](https://github.com/nakagami/micropg), developed by [nakagami](https://github.com/nakagami). Many thanks for the great work — without `micropg`, `micropg_lite` would not exist!
+
+Released under the MIT License.
