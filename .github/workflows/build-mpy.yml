@@ -1,0 +1,42 @@
+name: Build .mpy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - micropg_lite.py
+      - .github/workflows/build-mpy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.MPY_DEPLOY_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install mpy-cross
+        run: pip install mpy-cross
+
+      - name: Compile micropg_lite.py
+        run: mpy-cross -o micropg_lite.mpy micropg_lite.py
+
+      - name: Commit compiled file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add micropg_lite.mpy
+          if git diff --cached --quiet; then
+            echo "No changes in compiled file."
+          else
+            git commit -m "Update compiled micropg_lite.mpy [skip ci]"
+            git push
+          fi
