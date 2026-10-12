@@ -27,28 +27,47 @@
 # micropg (https://github.com/nakagami/micropg) a minipg (https://github.com/nakagami/minipg) subset.
 ##############################################################################
 
-### Version 3.1.0
+### Version 4.0.0
 
-import ssl, hashlib, socket, binascii, random
+import socket
 
+# ssl, hashlib, binascii and random are imported lazily where they are needed to save RAM.
 # -----------------------------------------------------------------------------
 
-def raiseExceptionLostConnection():
+def _lost():
     raise Exception("08003:Lost connection")
 
-def hmac_sha256_digest(key, msg):
-    pad_key = key + b'\x00' * (64 - len(key) % 64)
-    return hashlib.sha256(bytes(0x5c ^ b for b in pad_key) + hashlib.sha256(bytes(0x36 ^ b for b in pad_key) + msg).digest()).digest()
+# HMAC-SHA256. With n > 1 it chains n rounds and XORs them (PBKDF2-HMAC-SHA256, one block),
+# so the key pads are only calculated once.
+def hmac_sha256_digest(key, msg, n=1):
+    import hashlib
+    h = hashlib.sha256
+    if len(key) > 64: key = h(key).digest()
+    k = int.from_bytes(key + bytes(64 - len(key)), 'big')
+    r = int.from_bytes(b'\x01' * 64, 'big')
+    i = (k ^ 0x36 * r).to_bytes(64, 'big')
+    o = (k ^ 0x5c * r).to_bytes(64, 'big')
+    u = h(o + h(i + msg).digest()).digest()
+    x = int.from_bytes(u, 'big')
+    for _ in range(n - 1):
+        u = h(o + h(i + u).digest()).digest()
+        x ^= int.from_bytes(u, 'big')
+    return x.to_bytes(32, 'big')
 
 class Cursor:
     def __init__(self, connection):
         self.connection = connection
-        
+
     def execute(self, q, a=()):
-        if not self.connection or not bool(self.connection.sock): raiseExceptionLostConnection()
+        c = self.connection
+        if not (c and c.sock): _lost()
         self._rows = []
-        if a: q = q.replace('%', '%%').replace('%%s', '%s') % tuple(('NULL' if i is None else "'" + i.replace("'", "''") + "'" if isinstance(i, str) else "'" + ''.join(['\\%03o' % c for c in i]) + "'" for i in a))
-        self.connection.execute(q, self)
+        if a:
+            p = []
+            for i in a:
+                p.append('NULL' if i is None else "'" + i.replace("'", "''") + "'" if isinstance(i, str) else "'" + '\\%03o' * len(i) % tuple(i) + "'")
+            q = q.replace('%', '%%').replace('%%s', '%s') % tuple(p)
+        c.execute(q, self)
 
     def fetchall(self):
         rows = self._rows
@@ -60,153 +79,145 @@ class Cursor:
 
 class connect:
     def __init__(self, host, user, password, database, port=5432, use_ssl=False):
-        self.user = user
-        self.password = password
-        self.database = database
-        self.host = host
-        self.port = port
-        self.use_ssl = use_ssl
-        self.encoding = 'UTF8'
+        self.encoding = 'utf-8'
         self.autocommit = False
-        self._ready_for_query = b'I'
-        
-        # Inlined _open() function
-        self.sock = socket.socket()
-        self.sock.connect(socket.getaddrinfo(self.host, self.port)[0][-1])
-        if self.use_ssl:
-            self._write((8).to_bytes(4, 'big') + (80877103).to_bytes(4, 'big'))
-            if self._read(1) == b'S': self.sock = ssl.wrap_socket(self.sock)
-            else: raiseExceptionLostConnection()
-        v = b'\x00\x03\x00\x00user\x00' + self.user.encode('ascii') + b'\x00'
-        if self.database: v += b'database\x00' + self.database.encode('ascii') + b'\x00'
+        s = self.sock = socket.socket()
+        s.connect(socket.getaddrinfo(host, port)[0][-1])
+        if use_ssl:
+            self._write(b'\x00\x00\x00\x08\x04\xd2\x16\x2f')  # SSLRequest
+            if self._read(1) != b'S': _lost()
+            import ssl
+            self.sock = ssl.wrap_socket(s)
+        v = b'\x00\x03\x00\x00user\x00' + user.encode('ascii') + b'\x00'
+        if database: v += b'database\x00' + database.encode('ascii') + b'\x00'
         v += b'\x00'
         self._write((len(v) + 4).to_bytes(4, 'big') + v)
-        self._process_messages(None)
+        self._p(None, password)
 
-    def _send_message(self, message, data):
-        self._write(b''.join([message, (len(data) + 4).to_bytes(4, 'big'), data, b'H\x00\x00\x00\x04']))
+    # Sends a simple query (plus Flush). q is the already encoded query without the trailing NUL.
+    def _q(self, q):
+        self._write(b''.join((b'Q', (len(q) + 5).to_bytes(4, 'big'), q, b'\x00H\x00\x00\x00\x04')))
 
-    def _process_messages(self, obj):
+    # Reads and handles server messages until ReadyForQuery. o: cursor/file object, w: password (login only).
+    def _p(self, o, w=None):
         while True:
-            try: code = ord(self._read(1))
-            except: raiseExceptionLostConnection()
-            data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-            if code == 90: 
-                self._ready_for_query = data
-                break
-            elif code == 82:
-                nonce = str(random.getrandbits(32))
-                first = f'n,,n=,r={nonce}'.encode('utf-8')
-                msg = b'SCRAM-SHA-256\x00' + (len(first)).to_bytes(4, 'big') + first
-                self._write(b'p' + (len(msg) + 4).to_bytes(4, 'big') + msg)
-                assert ord(self._read(1)) == 82
-                data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                server = dict(kv.split('=', 1) for kv in data[4:].decode('utf-8').split(','))
-                pw_bytes = self.password.encode('utf-8')
-                iters = int(server['i'])
-                u1 = hmac_sha256_digest(pw_bytes, binascii.a2b_base64(server['s']) + b'\x00\x00\x00\x01')
-                ui = int.from_bytes(u1, 'big')
-                for _ in range(iters - 1):
-                    u1 = hmac_sha256_digest(pw_bytes, u1)
-                    ui ^= int.from_bytes(u1, 'big') 
-                client_key = hmac_sha256_digest(ui.to_bytes(32, 'big'), b"Client Key")
-                auth_msg = f"n=,r={nonce},r={server['r']},s={server['s']},i={server['i']},c=biws,r={server['r']}"
-                proof = binascii.b2a_base64(bytes(x ^ y for x, y in zip(client_key, hmac_sha256_digest(hashlib.sha256(client_key).digest(), auth_msg.encode('utf-8'))))).rstrip(b'\n')
-                final = f"c=biws,r={server['r']},p={proof.decode('utf-8')}".encode('utf-8')
-                self._write(b'p' + (len(final) + 4).to_bytes(4, 'big') + final)
-                for _ in range(3):
-                    assert ord(self._read(1)) == 82
-                    data = self._read(int.from_bytes(self._read(4), 'big') - 4)
-                    if int.from_bytes(data[:4], 'big') == 0: break
-            elif code == 67 and obj:
-                parts = data[:-1].decode('ascii').split()
-                if parts and parts[-1].isdigit(): obj._rowcount = int(parts[-1])
-            elif code == 84 and obj:
-                count = int.from_bytes(data[:2], 'big')
-                obj.description = [None] * count
+            try: h = self._read(5)
+            except: _lost()
+            c = h[0]
+            d = self._read(int.from_bytes(h[1:], 'big') - 4)
+            if c == 68 and o:
+                ds = o.description
+                e = self.encoding
+                r = [None] * len(ds)
                 n = 2
-                for i in range(count):
-                    name_end = data.index(b'\x00', n)
-                    name = data[n:name_end]
-                    n = name_end + 1
+                i = 0
+                while n < len(d):
+                    if d[n] == 255: n += 4
+                    else:
+                        l = int.from_bytes(d[n:n + 4], 'big')
+                        n += 4
+                        v = d[n:n + l]
+                        v = v.decode(e) if v else None
+                        t = ds[i][1]
+                        if t == 16: v = (v == 't')
+                        elif t in (21, 23, 20, 26): v = int(v)
+                        elif t in (700, 701): v = float(v)
+                        r[i] = v
+                        n += l
+                    i += 1
+                o._rows.append(tuple(r))
+            elif c == 90:
+                self._s = d[0]
+                break
+            elif c == 82:
+                t = d[3]
+                assert t == 0 or 9 < t < 13
+                if t == 10:
+                    import random
+                    nonce = str(random.getrandbits(32))
+                    f = ('n,,n=,r=' + nonce).encode()
+                    m = b'SCRAM-SHA-256\x00' + len(f).to_bytes(4, 'big') + f
+                    self._write(b'p' + (len(m) + 4).to_bytes(4, 'big') + m)
+                elif t == 11:
+                    import binascii, hashlib
+                    m = d[4:].decode()
+                    v = {}
+                    for x in m.split(','): v[x[0]] = x[2:]
+                    r = v['r']
+                    ck = hmac_sha256_digest(hmac_sha256_digest(w.encode(), binascii.a2b_base64(v['s']) + b'\x00\x00\x00\x01', int(v['i'])), b'Client Key')
+                    sig = hmac_sha256_digest(hashlib.sha256(ck).digest(), f'n=,r={nonce},{m},c=biws,r={r}'.encode())
+                    proof = binascii.b2a_base64((int.from_bytes(ck, 'big') ^ int.from_bytes(sig, 'big')).to_bytes(32, 'big')).rstrip(b'\n')
+                    f = f'c=biws,r={r},p='.encode() + proof
+                    self._write(b'p' + (len(f) + 4).to_bytes(4, 'big') + f)
+            elif c == 67 and o:
+                p = d[:-1].decode('ascii').split()
+                if p and p[-1].isdigit(): o._rowcount = int(p[-1])
+            elif c == 84 and o:
+                k = int.from_bytes(d[:2], 'big')
+                ds = o.description = [None] * k
+                n = 2
+                for i in range(k):
+                    j = d.index(b'\x00', n)
+                    name = d[n:j]
+                    n = j + 1
                     try: name = name.decode(self.encoding)
                     except: pass
-                    type_code = int.from_bytes(data[n+6:n+10], 'big')
-                    size, precision, scale = int.from_bytes(data[n+10:n+12], 'big'), -1, -1
-                    obj.description[i] = (name, type_code, None, size, precision, scale, None)
+                    ds[i] = (name, int.from_bytes(d[n + 6:n + 10], 'big'), None, int.from_bytes(d[n + 10:n + 12], 'big'), -1, -1, None)
                     n += 18
-            elif code == 68 and obj:
-                n, row = 2, []
-                while n < len(data):
-                    if data[n:n+4] == b'\xff\xff\xff\xff': row.append(None); n += 4
-                    else:
-                        ln = int.from_bytes(data[n:n+4], 'big')
-                        col_data = data[n+4:n+4+ln]
-                        col_oid = obj.description[len(row)][1]
-                        decoded_data = col_data.decode(self.encoding) if col_data else None
-                        if col_oid == 16: decoded_data = (decoded_data == 't')
-                        elif col_oid in (21, 23, 20, 26): decoded_data = int(decoded_data)
-                        elif col_oid in (700, 701): decoded_data = float(decoded_data)
-                        row.append(decoded_data)
-                        n += ln + 4
-                obj._rows.append(tuple(row))
-            elif code == 69: raiseExceptionLostConnection()
-            elif code == 100: obj.write(data)
-            elif code == 71:
-                while True:
-                    buf = obj.read(8192)
-                    if not buf: break
-                    self._write(b'd' + (len(buf) + 4).to_bytes(4, 'big') + buf)
+            elif c == 69: _lost()
+            elif c == 100: o.write(d)
+            elif c == 71:
+                b = o.read(8192)
+                while b:
+                    self._write(b'd' + (len(b) + 4).to_bytes(4, 'big'))
+                    self._write(b)
+                    b = o.read(8192)
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
-                
-    def _read(self, ln):
-        if not self.sock: raiseExceptionLostConnection()
-        r = bytearray(ln)
-        pos = 0
-        while pos < ln:
-            chunk = self.sock.read(ln - pos) if hasattr(self.sock, "read") else self.sock.recv(ln - pos)
-            if not chunk: raiseExceptionLostConnection()
-            r[pos:pos+len(chunk)] = chunk
-            pos += len(chunk)
-        return bytes(r)
+
+    def _read(self, n):
+        s = self.sock
+        if not s: _lost()
+        r = b''
+        while len(r) < n:
+            c = s.read(n - len(r)) if hasattr(s, 'read') else s.recv(n - len(r))
+            if not c: _lost()
+            r = r + c if r else c
+        return r
 
     def _write(self, b):
-        if not self.sock:
-            raiseExceptionLostConnection()
-        pos = 0
-        while pos < len(b):
-            pos += self.sock.write(b[pos:]) if hasattr(self.sock, "write") else self.sock.send(b[pos:])
+        s = self.sock
+        if not s: _lost()
+        w = s.write if hasattr(s, 'write') else s.send
+        m = memoryview(b)
+        p = 0
+        while p < len(b): p += w(m[p:])
 
     def cursor(self):
         return Cursor(self)
 
     def execute(self, query, obj=None):
-        if self._ready_for_query != b'T':
-            self.begin()
-        self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
-        self._process_messages(obj)
-        if self.autocommit:
-            self.commit()
+        if self._s != 84: self.begin()
+        self._q(query.encode(self.encoding))
+        self._p(obj)
+        if self.autocommit: self.commit()
 
     def begin(self):
-        if self._ready_for_query == b'E':
-            self._rollback()
-        self._send_message(b'Q', b"BEGIN\x00")
-        self._process_messages(None)
+        if self._s == 69:
+            self._q(b'ROLLBACK')
+            self._p(None)
+        self._q(b'BEGIN')
+        self._p(None)
 
     def commit(self):
         if self.sock:
-            self._send_message(b'Q', b"COMMIT\x00")
-            self._process_messages(None)
+            self._q(b'COMMIT')
+            self._p(None)
             self.begin()
 
-    def _rollback(self):
-        if self.sock:
-            self._send_message(b'Q', b"ROLLBACK\x00")
-            self._process_messages(None)
-
     def rollback(self):
-        self._rollback()
+        if self.sock:
+            self._q(b'ROLLBACK')
+            self._p(None)
         self.begin()
 
     def close(self):
@@ -216,11 +227,11 @@ class connect:
             self.sock = None
 
 def create_database(host, user, password, database, port=5432, use_ssl=False):
-    conn = connect(host, user, password, None, port, use_ssl)
-    conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-    conn.close()
+    c = connect(host, user, password, None, port, use_ssl)
+    c._q('CREATE DATABASE {}'.format(database).encode())
+    c.close()
 
 def drop_database(host, user, password, database, port=5432, use_ssl=False):
-    conn = connect(host, user, password, None, port, use_ssl)
-    conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-    conn.close()
+    c = connect(host, user, password, None, port, use_ssl)
+    c._q('DROP DATABASE {}'.format(database).encode())
+    c.close()
