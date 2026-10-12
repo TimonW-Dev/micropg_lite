@@ -27,7 +27,7 @@
 # micropg (https://github.com/nakagami/micropg) a minipg (https://github.com/nakagami/minipg) subset.
 ##############################################################################
 
-### Version 3.1.0
+### Version 4.0.0
 
 import socket
 
